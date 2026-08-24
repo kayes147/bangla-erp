@@ -13,7 +13,7 @@ export default function LayoutWrapper({
   const pathname = usePathname();
 
   // Pages that should NOT have the Sidebar and TopNav
-  const isAuthPage = pathname === "/login" || pathname === "/portal/login" || pathname === "/select-company";
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/portal/login" || pathname === "/select-company";
   
   const isClientPortal = pathname.startsWith("/portal") && !isAuthPage;
 
