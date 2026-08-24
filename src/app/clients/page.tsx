@@ -3,6 +3,8 @@ import { Users, UserPlus } from "lucide-react";
 import { getClients } from '@/actions/clientActions';
 import ClientsList from './ClientsList';
 
+export const dynamic = "force-dynamic";
+
 export default async function Clients() {
   const { clients } = await getClients();
 

@@ -2,6 +2,8 @@ import { getEmployees } from "@/actions/employeeActions";
 import { getAttendances } from "@/actions/attendanceActions";
 import AttendanceClient from "./AttendanceClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function AttendancePage() {
   const { employees } = await getEmployees();
   

@@ -1,5 +1,7 @@
 import { getEmployees } from "@/actions/employeeActions";
 import EmployeeList from "./EmployeeList";
+
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { Users, UserPlus, Banknote } from "lucide-react";
 
