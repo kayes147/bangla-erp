@@ -1,7 +1,8 @@
 "use client";
 import Link from 'next/link';
 import { useState } from 'react';
-import { Home, PackagePlus, PackageMinus, Wallet, Receipt, Landmark, Users, Settings, UserCog, ChevronDown, ChevronUp } from 'lucide-react';
+import { Home, PackagePlus, PackageMinus, Wallet, Receipt, Landmark, Users, Settings, UserCog, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 
 export default function Sidebar() {
   const [isHrOpen, setIsHrOpen] = useState(false);
@@ -98,11 +99,18 @@ export default function Sidebar() {
           )}
         </div>
       </nav>
-      <div className="p-4 border-t border-slate-700 sticky bottom-0 bg-slate-900">
+      <div className="p-4 border-t border-slate-700 sticky bottom-0 bg-slate-900 space-y-2">
         <Link href="/settings" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
           <Settings size={18} />
           <span>Settings (সেটিংস)</span>
         </Link>
+        <button 
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-red-900/50 text-red-400 transition-colors"
+        >
+          <LogOut size={18} />
+          <span>Log Out (লগআউট)</span>
+        </button>
       </div>
     </div>
   );
