@@ -70,7 +70,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
               <select 
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                 required
               >
                 <option value="">Select Supplier...</option>
@@ -88,7 +88,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
                 placeholder="e.g. Radhuni Masala 500g" 
-                className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
+                className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
                 required
               />
             </div>
@@ -101,7 +101,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder="0" 
-                className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
+                className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
                 required
               />
             </div>
@@ -114,7 +114,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="৳ 0.00" 
-                className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
+                className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
                 required
               />
             </div>
@@ -122,7 +122,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
             {/* Total Amount */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">মোট টাকা <span className="text-[10px] font-normal text-gray-400 uppercase">(Total Amount)</span></label>
-              <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 font-bold text-emerald-700">
+              <div className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg bg-gray-50 font-bold text-emerald-700">
                 ৳ {totalAmount.toLocaleString()}
               </div>
             </div>
@@ -135,7 +135,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
                 value={paidAmount}
                 onChange={(e) => setPaidAmount(e.target.value)}
                 placeholder="৳ 0.00" 
-                className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
+                className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
               />
             </div>
           </div>
