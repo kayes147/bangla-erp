@@ -34,7 +34,6 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
           <option value="all">সবাই (All)</option>
           <option value="due">যাদের বাকী আছে (Due Only)</option>
           <option value="supplier">মহাজন (Suppliers)</option>
-          <option value="customer">গ্রাহক (Customers)</option>
         </select>
       </div>
       

@@ -36,7 +36,7 @@ export default function Sidebar() {
         </Link>
         <Link href="/clients" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
           <Users size={18} />
-          <span>গ্রাহক / মহাজন <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Clients)</span></span>
+          <span>মহাজন <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Suppliers)</span></span>
         </Link>
         <Link href="/loan" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
           <Landmark size={18} />

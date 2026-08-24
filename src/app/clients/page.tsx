@@ -14,8 +14,8 @@ export default async function Clients() {
             <Users size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">গ্রাহক ও মহাজন <span className="text-lg font-normal text-gray-500">(Clients & Suppliers)</span></h1>
-            <p className="text-sm text-gray-500 mt-1">Manage profiles and login access for your partners.</p>
+            <h1 className="text-2xl font-bold text-gray-800">মহাজন <span className="text-lg font-normal text-gray-500">(Suppliers)</span></h1>
+            <p className="text-sm text-gray-500 mt-1">Manage profiles and login access for your suppliers.</p>
           </div>
         </div>
         <Link href="/clients/new" className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-sm text-sm">
