@@ -5,6 +5,7 @@ import { getTransactions } from "@/actions/transactionActions";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import CashActionButtons from "./CashActionButtons";
 
 export default async function MainCash() {
   const session = await auth();
@@ -43,16 +44,7 @@ export default async function MainCash() {
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Main Cash <span className="text-lg font-normal text-gray-500">(মূল ক্যাশ)</span></h1>
         </div>
-        <div className="flex space-x-3">
-          <button className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm text-sm">
-            <ArrowDownRight size={18} />
-            <span>Add Cash <span className="text-[10px] font-normal uppercase">(ক্যাশ ইন)</span></span>
-          </button>
-          <button className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm text-sm">
-            <ArrowUpRight size={18} />
-            <span>Remove Cash <span className="text-[10px] font-normal uppercase">(ক্যাশ আউট)</span></span>
-          </button>
-        </div>
+        <CashActionButtons />
       </div>
 
       {/* Summary Cards */}
