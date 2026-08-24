@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User Model for RBAC
+model User {
+  id             String         @id @default(cuid())
+  username       String         @unique
+  password       String         // In a real app, this will be hashed
+  role           String         // "OWNER", "MANAGER", "CLIENT"
+  
+  // Relations
+  clientId       String?        @unique // If role is CLIENT
+  client         Client?        @relation(fields: [clientId], references: [id])
+  employeeId     String?        @unique // If role is MANAGER
+  employee       Employee?      @relation(fields: [employeeId], references: [id])
+  
+  auditLogs      AuditLog[]     // Actions performed by this user (Manager)
+  createdAt      DateTime       @default(now())
+}
+
+// Audit Log for Manager Actions
+model AuditLog {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  action         String         // e.g., "Created Invoice", "Deleted Expense"
+  details        String         // JSON or text description
+  createdAt      DateTime       @default(now())
+}
+
+// Clients (Customers and Suppliers)
+model Client {
+  id             String         @id @default(cuid())
+  type           String         // "customer" or "supplier"
+  name           String
+  phone          String
+  address        String?
+  openingBalance Float          @default(0) // Positive = Receivable, Negative = Payable
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  // Relations
+  invoices       Invoice[]
+  transactions   Transaction[]
+  user           User?          // Login account for this client
+}
+
+// Employees
+model Employee {
+  id             String         @id @default(cuid())
+  type           String         // "permanent" or "daily"
+  name           String
+  phone          String
+  designation    String?
+  joiningDate    DateTime?
+  salaryAmount   Float
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  salariesPaid   Expense[]      // Salaries are recorded as expenses
+  user           User?          // Login account for this employee (if MANAGER)
+}
+
+// Expense Categories
+model ExpenseCategory {
+  id             String         @id @default(cuid())
+  name           String         @unique
+  createdAt      DateTime       @default(now())
+  expenses       Expense[]
+}
+
+// Daily Expenses
+model Expense {
+  id             String         @id @default(cuid())
+  date           DateTime       @default(now())
+  categoryId     String
+  category       ExpenseCategory @relation(fields: [categoryId], references: [id])
+  employeeId     String?
+  employee       Employee?      @relation(fields: [employeeId], references: [id])
+  paidTo         String?
+  amount         Float
+  description    String
+  paymentMethod  String         
+  isPersonal     Boolean        @default(false) // Whether it's an Owner's personal expense
+  status         String         @default("APPROVED") // PENDING, APPROVED, REJECTED
+  requestedBy    String?        // ID of user who requested
+  createdAt      DateTime       @default(now())
+  
+  transactionId  String?        @unique
+  transaction    Transaction?   @relation(fields: [transactionId], references: [id])
+}
+
+// Data Correction Requests (Two-way error correction)
+model CorrectionRequest {
+  id             String         @id @default(cuid())
+  requesterId    String         // Who asked for the change (Owner/Client)
+  responderId    String         // Who needs to approve (Client/Owner)
+  targetType     String         // "INVOICE", "TRANSACTION", etc.
+  targetId       String         // ID of the record to change
+  details        String         // What needs to be changed and why
+  status         String         @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+// Products (Inventory)
+model Product {
+  id             String         @id @default(cuid())
+  name           String
+  sku            String?
+  stock          Int            @default(0)
+  buyPrice       Float          @default(0)
+  sellPrice      Float          @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  invoiceItems   InvoiceItem[]
+}
+
+// Invoices (Product In / Out)
+model Invoice {
+  id             String         @id @default(cuid())
+  type           String         // "product_in" or "product_out"
+  date           DateTime       @default(now())
+  clientId       String
+  client         Client         @relation(fields: [clientId], references: [id])
+  totalAmount    Float          @default(0)
+  paidAmount     Float          @default(0)
+  paymentStatus  String         // "paid", "due", "partial"
+  status         String         @default("APPROVED") // PENDING, APPROVED, REJECTED
+  requestedBy    String?        // ID of user who requested
+  createdAt      DateTime       @default(now())
+
+  items          InvoiceItem[]
+  transactions   Transaction[]
+}
+
+// Items inside an invoice
+model InvoiceItem {
+  id             String         @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice        @relation(fields: [invoiceId], references: [id])
+  productId      String
+  product        Product        @relation(fields: [productId], references: [id])
+  quantity       Int
+  pricePerUnit   Float
+  total          Float
+}
+
+// Main Cash (Ledger)
+model Transaction {
+  id             String         @id @default(cuid())
+  date           DateTime       @default(now())
+  type           String         // "in" or "out"
+  amount         Float
+  description    String
+  status         String         @default("APPROVED") // PENDING, APPROVED, REJECTED
+  requestedBy    String?        // ID of user who requested
+  
+  clientId       String?
+  client         Client?        @relation(fields: [clientId], references: [id])
+  invoiceId      String?
+  invoice        Invoice?       @relation(fields: [invoiceId], references: [id])
+  
+  expense        Expense?
+
+  createdAt      DateTime       @default(now())
+}
