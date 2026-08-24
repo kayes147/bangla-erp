@@ -31,12 +31,9 @@ export default function SelectCompany() {
               <span className="text-[10px] font-bold mt-1">BF</span>
             </div>
             
-            <h2 className="text-xl font-bold text-gray-900 mb-1">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
               বলাকা ফার্নিচার <span className="text-sm font-medium text-gray-500 block mt-1">(BOLAKA FURNITURE)</span>
             </h2>
-            <p className="text-sm font-bold text-gray-600 mt-4 mb-6">
-              ২ টি ব্যবসায়িক বিভাগ <span className="text-[10px] text-gray-400 block uppercase mt-0.5">(2 BUSINESS DIVISIONS)</span>
-            </p>
             
             <Link href="/" className="w-full flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-lg text-sm font-bold transition-colors mb-4">
               <span>প্রবেশ করুন <span className="text-xs font-normal opacity-70">(Enter)</span></span>
@@ -56,12 +53,9 @@ export default function SelectCompany() {
               <span className="text-[10px] font-bold mt-1">FAC</span>
             </div>
             
-            <h2 className="text-xl font-bold text-gray-900 mb-1">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
               বলাকা ফ্যাক্টরি <span className="text-sm font-medium text-gray-500 block mt-1">(BOLAKA FACTORY)</span>
             </h2>
-            <p className="text-sm font-bold text-gray-600 mt-4 mb-6">
-              ১ টি ব্যবসায়িক বিভাগ <span className="text-[10px] text-gray-400 block uppercase mt-0.5">(1 BUSINESS DIVISIONS)</span>
-            </p>
             
             <Link href="/" className="w-full flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-lg text-sm font-bold transition-colors mb-4">
               <span>প্রবেশ করুন <span className="text-xs font-normal opacity-70">(Enter)</span></span>
