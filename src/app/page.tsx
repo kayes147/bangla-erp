@@ -1,5 +1,9 @@
 import { DollarSign, ShoppingBag, TrendingUp, Wallet, Receipt, Landmark, PackagePlus, PackageMinus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { getPendingApprovals } from "@/actions/approvalActions";
+
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const today = new Date();
@@ -39,7 +43,7 @@ export default async function Home() {
   const purchasesDue = purchasesTotal - purchasesPaid;
   const purchasesProductCount = todaysPurchases.reduce((sum, p) => sum + p.items.reduce((q, item) => q + item.quantity, 0), 0);
 
-  // 5. Total Loan/Due (Receivable)
+  // 5. Total Loan/Due (Receivable/Payable)
   const clients = await prisma.client.findMany();
   const totalDueReceivable = clients.reduce((sum, c) => c.openingBalance > 0 ? sum + c.openingBalance : sum, 0);
 
@@ -60,13 +64,23 @@ export default async function Home() {
   
   const monthlyProfit = mSalesTotal - mPurchasesTotal - mExpensesTotal;
 
+  // 7. Low Stock Products
+  const lowStockProducts = await prisma.product.findMany({
+    where: { stock: { lt: 10 } },
+    take: 5
+  });
+
+  // 8. Approvals
+  const { invoices: pendingInvoices, expenses: pendingExpenses, transactions: pendingTransactions } = await getPendingApprovals();
+  const totalPending = (pendingInvoices?.length || 0) + (pendingExpenses?.length || 0) + (pendingTransactions?.length || 0);
+
   return (
     <div className="space-y-6">
       {/* 6 Stat Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {/* Product Out / Sales */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center mb-3">
             <div className="p-2.5 rounded-full bg-blue-100 text-blue-600 mr-3">
               <PackageMinus size={20} />
@@ -93,7 +107,7 @@ export default async function Home() {
         </div>
         
         {/* Product In / Purchase */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center mb-3">
             <div className="p-2.5 rounded-full bg-green-100 text-green-600 mr-3">
               <PackagePlus size={20} />
@@ -120,7 +134,7 @@ export default async function Home() {
         </div>
 
         {/* Main Cash */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center hover:shadow-md transition-shadow">
           <div className="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4">
             <Wallet size={24} />
           </div>
@@ -131,7 +145,7 @@ export default async function Home() {
         </div>
 
         {/* Daily Expenses */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center hover:shadow-md transition-shadow">
           <div className="p-3 rounded-full bg-red-100 text-red-600 mr-4">
             <Receipt size={24} />
           </div>
@@ -142,7 +156,7 @@ export default async function Home() {
         </div>
 
         {/* Loan */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center hover:shadow-md transition-shadow">
           <div className="p-3 rounded-full bg-orange-100 text-orange-600 mr-4">
             <Landmark size={24} />
           </div>
@@ -153,7 +167,7 @@ export default async function Home() {
         </div>
 
         {/* Monthly Profit */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center hover:shadow-md transition-shadow">
           <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
             <TrendingUp size={24} />
           </div>
@@ -171,7 +185,7 @@ export default async function Home() {
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-bold text-gray-800">সাম্প্রতিক লেনদেন <span className="text-xs font-normal text-gray-500">(Recent Transactions)</span></h2>
-            <button className="text-blue-600 text-sm font-medium hover:underline">View All</button>
+            <Link href="/main-cash" className="text-blue-600 text-sm font-medium hover:underline">View All</Link>
           </div>
           <div className="p-0 overflow-x-auto">
             <table className="w-full text-left text-sm text-gray-600">
@@ -185,7 +199,6 @@ export default async function Home() {
                 </tr>
               </thead>
               <tbody>
-                {/* Dynamically render recent transactions */}
                 {allTransactions.slice(0, 5).reverse().map((t) => (
                   <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="p-4">
@@ -193,17 +206,17 @@ export default async function Home() {
                         {t.type === 'in' ? 'Cash In' : 'Cash Out'}
                       </span>
                     </td>
-                    <td className="p-4">{t.description}</td>
+                    <td className="p-4 font-medium text-gray-800">{t.description}</td>
                     <td className="p-4">{t.date.toLocaleDateString()}</td>
-                    <td className="p-4 font-medium text-gray-800">৳ {t.amount}</td>
+                    <td className="p-4 font-bold text-gray-800">৳ {t.amount.toLocaleString()}</td>
                     <td className="p-4">
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">Completed</span>
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">{t.status}</span>
                     </td>
                   </tr>
                 ))}
                 {allTransactions.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center text-gray-500">No transactions yet.</td>
+                    <td colSpan={5} className="p-4 text-center text-gray-500 font-medium">No transactions yet.</td>
                   </tr>
                 )}
               </tbody>
@@ -214,87 +227,45 @@ export default async function Home() {
         {/* Low Stock Alert */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-800">Low Stock Alert (কম স্টক)</h2>
+            <h2 className="text-lg font-bold text-gray-800">Low Stock Alert (কম স্টক)</h2>
           </div>
           <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-800">Radhuni Masala 500g</p>
-                <p className="text-xs text-gray-500">SKU: RD-500</p>
+            {lowStockProducts.map(p => (
+              <div key={p.id} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                <div>
+                  <p className="text-sm font-bold text-gray-800">{p.name}</p>
+                  {p.sku && <p className="text-xs text-gray-500 font-medium">SKU: {p.sku}</p>}
+                </div>
+                <span className="text-red-600 font-bold text-sm bg-red-50 px-2 py-1 rounded">{p.stock} left</span>
               </div>
-              <span className="text-red-600 font-bold text-sm">5 left</span>
-            </div>
+            ))}
+            {lowStockProducts.length === 0 && (
+              <p className="text-sm text-gray-500 italic text-center">No low stock items.</p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Client Requests & Manager Approvals Split View */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
-        
-        {/* Client Requests */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-orange-50/50 flex justify-between items-center">
-            <h2 className="font-bold text-gray-800 flex items-center">
-              <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
-              গ্রাহকের রিকোয়েস্ট <span className="text-xs font-normal text-gray-500 ml-1">(Client Requests)</span>
-            </h2>
-            <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded-full">2 Pending</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <tbody className="divide-y divide-gray-50">
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4">
-                    <p className="font-bold text-gray-800">Karim Traders <span className="text-xs font-normal text-gray-400">(Product In)</span></p>
-                    <p className="text-xs text-gray-500 mt-1">Radhuni Masala 500g • 50 Box</p>
-                  </td>
-                  <td className="p-4 text-right">
-                    <button className="text-xs font-bold text-indigo-600 hover:underline">Review & Approve &rarr;</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4">
-                    <p className="font-bold text-gray-800">Rahim Uddin <span className="text-xs font-normal text-gray-400">(Product Out)</span></p>
-                    <p className="text-xs text-gray-500 mt-1">Fresh Atta 2kg • 10 Kg</p>
-                  </td>
-                  <td className="p-4 text-right">
-                    <button className="text-xs font-bold text-indigo-600 hover:underline">Review & Approve &rarr;</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      {/* Approvals Section */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mt-6">
+        <div className="p-4 border-b border-gray-100 bg-orange-50/50 flex justify-between items-center">
+          <h2 className="font-bold text-gray-800 flex items-center">
+            <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
+            অ্যাপ্রুভাল রিকোয়েস্ট <span className="text-xs font-normal text-gray-500 ml-1">(Pending Approvals)</span>
+          </h2>
+          <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded-full">{totalPending} Pending</span>
         </div>
-
-        {/* Manager / Internal Requests */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-red-50/50 flex justify-between items-center">
-            <h2 className="font-bold text-gray-800 flex items-center">
-              <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
-              ইন্টারনাল অ্যাপ্রুভাল <span className="text-xs font-normal text-gray-500 ml-1">(Manager Requests)</span>
-            </h2>
-            <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">1 Pending</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <tbody className="divide-y divide-gray-50">
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4">
-                    <p className="font-bold text-gray-800">Hasibul Manager <span className="text-xs font-normal text-gray-400">(Cash Withdrawal)</span></p>
-                    <p className="text-xs text-gray-500 mt-1">Request to withdraw ৳ 5,000 for office maintenance.</p>
-                  </td>
-                  <td className="p-4 text-right">
-                    <button className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded text-xs font-bold transition-colors">
-                      Review <span className="text-[10px] font-normal block">(Approve)</span>
-                    </button>
-                  </td>
-                </tr>
-                <tr className="bg-gray-50 text-center opacity-50">
-                  <td colSpan={2} className="p-6 text-xs font-medium">No other pending requests.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div className="p-6">
+          {totalPending > 0 ? (
+            <div className="flex flex-col items-center justify-center space-y-3">
+              <p className="text-sm text-gray-600 font-medium">You have <span className="font-bold text-orange-600">{totalPending}</span> requests waiting for your approval.</p>
+              <Link href="/approvals" className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                View & Approve Requests
+              </Link>
+            </div>
+          ) : (
+             <p className="text-sm text-gray-500 text-center font-medium">No pending requests right now.</p>
+          )}
         </div>
       </div>
     </div>
