@@ -1,7 +1,47 @@
+"use client";
+import { useState } from "react";
 import { UserPlus, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/actions/clientActions";
 
 export default function AddNewClient() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [type, setType] = useState("customer");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [amount, setAmount] = useState("0");
+  const [balanceType, setBalanceType] = useState("receivable");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    let openingBalance = parseFloat(amount) || 0;
+    if (balanceType === "payable") {
+      openingBalance = -Math.abs(openingBalance);
+    } else {
+      openingBalance = Math.abs(openingBalance);
+    }
+
+    const res = await createClient({
+      type,
+      name,
+      phone,
+      address,
+      openingBalance
+    });
+
+    setLoading(false);
+    if (res.success) {
+      router.push("/clients");
+    } else {
+      alert(res.error);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center space-x-3 pb-4 border-b border-gray-200">
@@ -11,23 +51,23 @@ export default function AddNewClient() {
         <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
           <UserPlus size={24} />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800">Add New Client/Supplier (নতুন গ্রাহক/মহাজন)</h1>
+        <h1 className="text-2xl font-bold text-gray-800">নতুন গ্রাহক/মহাজন যোগ করুন <span className="text-sm font-normal text-gray-500">(Add New Client/Supplier)</span></h1>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <form className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Client Type */}
           <div className="pb-6 border-b border-gray-100">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Type (ধরন)</label>
+            <label className="block text-sm font-bold text-gray-700 mb-3">ধরন <span className="text-[10px] font-normal text-gray-400 uppercase">(Type)</span></label>
             <div className="flex space-x-4">
-              <label className="flex items-center space-x-2 cursor-pointer p-3 border border-indigo-200 bg-indigo-50 rounded-lg text-indigo-700 font-medium">
-                <input type="radio" name="client_type" value="customer" defaultChecked className="text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
-                <span>Customer (গ্রাহক)</span>
+              <label className={`flex items-center space-x-2 cursor-pointer p-3 border rounded-lg font-bold transition-colors ${type === 'customer' ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+                <input type="radio" name="client_type" value="customer" checked={type === 'customer'} onChange={() => setType('customer')} className="text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+                <span>গ্রাহক <span className="font-normal opacity-80">(Customer)</span></span>
               </label>
-              <label className="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 hover:bg-gray-50 rounded-lg text-gray-700 font-medium transition-colors">
-                <input type="radio" name="client_type" value="supplier" className="text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
-                <span>Supplier (মহাজন/সাপ্লায়ার)</span>
+              <label className={`flex items-center space-x-2 cursor-pointer p-3 border rounded-lg font-bold transition-colors ${type === 'supplier' ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+                <input type="radio" name="client_type" value="supplier" checked={type === 'supplier'} onChange={() => setType('supplier')} className="text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+                <span>মহাজন <span className="font-normal opacity-80">(Supplier)</span></span>
               </label>
             </div>
           </div>
@@ -36,47 +76,47 @@ export default function AddNewClient() {
             
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Name (নাম) <span className="text-red-500">*</span></label>
-              <input type="text" placeholder="e.g. Rahim Uddin" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" required />
+              <label className="block text-sm font-bold text-gray-700 mb-2">নাম <span className="text-[10px] font-normal text-gray-400 uppercase">(Name)</span> <span className="text-red-500">*</span></label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Rahim Uddin" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" required />
             </div>
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number (মোবাইল নম্বর) <span className="text-red-500">*</span></label>
-              <input type="tel" placeholder="e.g. 01700000000" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" required />
+              <label className="block text-sm font-bold text-gray-700 mb-2">মোবাইল নম্বর <span className="text-[10px] font-normal text-gray-400 uppercase">(Phone)</span> <span className="text-red-500">*</span></label>
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 01700000000" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800" required />
             </div>
 
             {/* Address */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Address (ঠিকানা)</label>
-              <textarea rows={2} placeholder="Full address..." className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"></textarea>
+              <label className="block text-sm font-bold text-gray-700 mb-2">ঠিকানা <span className="text-[10px] font-normal text-gray-400 uppercase">(Address)</span></label>
+              <textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Full address..." className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium text-gray-800"></textarea>
             </div>
 
             {/* Opening Balance */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Previous Due/Balance (আগের বাকী)</label>
-              <input type="number" placeholder="৳ 0.00" defaultValue="0" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
-              <p className="text-xs text-gray-500 mt-1">If they already owe you money or you owe them.</p>
+              <label className="block text-sm font-bold text-gray-700 mb-2">আগের বাকী <span className="text-[10px] font-normal text-gray-400 uppercase">(Previous Due)</span></label>
+              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="৳ 0.00" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-900" />
+              <p className="text-[10px] text-gray-500 mt-1 uppercase font-medium">If they already owe you money or you owe them.</p>
             </div>
 
             {/* Balance Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Balance Type (টাকার ধরন)</label>
-              <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                <option value="receivable">I will get money (আমি টাকা পাবো)</option>
-                <option value="payable">I have to pay (আমাকে টাকা দিতে হবে)</option>
+              <label className="block text-sm font-bold text-gray-700 mb-2">টাকার ধরন <span className="text-[10px] font-normal text-gray-400 uppercase">(Balance Type)</span></label>
+              <select value={balanceType} onChange={(e) => setBalanceType(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800">
+                <option value="receivable">আমি টাকা পাবো (I will get money)</option>
+                <option value="payable">আমাকে টাকা দিতে হবে (I have to pay)</option>
               </select>
             </div>
 
           </div>
 
           <div className="pt-6 border-t border-gray-100 flex justify-end space-x-3">
-            <Link href="/clients" className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-              Cancel (বাতিল)
+            <Link href="/clients" className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition-colors text-sm">
+              বাতিল <span className="font-normal opacity-80">(Cancel)</span>
             </Link>
-            <button type="button" className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm">
+            <button type="submit" disabled={loading} className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-sm text-sm">
               <Save size={20} />
-              <span>Save Details (সেভ করুন)</span>
+              <span>{loading ? "Saving..." : "সেভ করুন (Save Details)"}</span>
             </button>
           </div>
         </form>
