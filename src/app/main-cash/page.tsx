@@ -1,6 +1,4 @@
 import { Wallet, ArrowDownRight, ArrowUpRight, Plus, Download } from "lucide-react";
-
-import { Wallet, ArrowDownRight, ArrowUpRight, Plus, Download } from "lucide-react";
 import { getTransactions } from "@/actions/transactionActions";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
