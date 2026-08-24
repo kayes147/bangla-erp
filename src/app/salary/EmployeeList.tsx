@@ -1,10 +1,17 @@
 "use client";
 import { useState } from "react";
-import { Search, History } from "lucide-react";
+import { Search, History, Banknote, X, Save } from "lucide-react";
+import { paySalary } from "@/actions/employeeActions";
 
-export default function EmployeeList({ initialEmployees }: { initialEmployees: any[] }) {
+export default function EmployeeList({ initialEmployees, userRole = "owner" }: { initialEmployees: any[], userRole?: string }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEmp, setSelectedEmp] = useState<any>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMonth, setPayMonth] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const filteredEmployees = initialEmployees.filter(emp => {
     const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -13,8 +20,39 @@ export default function EmployeeList({ initialEmployees }: { initialEmployees: a
     return matchesSearch && matchesType;
   });
 
+  const openPayModal = (emp: any) => {
+    setSelectedEmp(emp);
+    setPayAmount(emp.salaryAmount.toString());
+    setPayMonth(new Date().toLocaleString('en-us', { month: 'short', year: 'numeric' }));
+    setIsModalOpen(true);
+  };
+
+  const handlePay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEmp || !payAmount || !payMonth) return;
+
+    setLoading(true);
+    const status = userRole === "owner" ? "APPROVED" : "PENDING";
+    
+    const res = await paySalary(
+      selectedEmp.id,
+      parseFloat(payAmount),
+      payMonth,
+      userRole,
+      status
+    );
+
+    setLoading(false);
+    if (res.success) {
+      setIsModalOpen(false);
+      setSelectedEmp(null);
+    } else {
+      alert("Error: " + res.error);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative">
       <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
         <div className="relative w-full max-w-md">
           <input 
@@ -79,8 +117,9 @@ export default function EmployeeList({ initialEmployees }: { initialEmployees: a
                       <span className="text-gray-400 italic">Not paid yet</span>
                     )}
                   </td>
-                  <td className="p-4 text-right flex justify-end space-x-2">
+                  <td className="p-4 text-right flex justify-end items-center space-x-3">
                     <button className="text-gray-500 hover:text-indigo-600" title="History"><History size={18}/></button>
+                    <button onClick={() => openPayModal(emp)} className="text-green-600 hover:underline font-bold text-sm">Pay Now</button>
                   </td>
                 </tr>
               )
@@ -95,6 +134,67 @@ export default function EmployeeList({ initialEmployees }: { initialEmployees: a
           </tbody>
         </table>
       </div>
+
+      {/* Pay Modal */}
+      {isModalOpen && selectedEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-gray-900/30">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-green-100 text-green-600 rounded-lg">
+                  <Banknote size={20} />
+                </div>
+                <h2 className="text-lg font-bold text-gray-800">বেতন দিন <span className="text-sm font-normal text-gray-500">(Pay Salary)</span></h2>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                <p className="text-sm text-gray-500">Paying to</p>
+                <p className="text-xl font-bold text-gray-800">{selectedEmp.name}</p>
+                <p className="text-xs text-gray-500 mt-1">{selectedEmp.type === 'permanent' ? 'Permanent Employee' : 'Daily Worker'}</p>
+              </div>
+
+              <form onSubmit={handlePay} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">পরিমাণ <span className="text-[10px] font-normal text-gray-400 uppercase">(Amount)</span></label>
+                  <input 
+                    type="number" 
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all font-bold text-gray-900" 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">মাস বা তারিখ <span className="text-[10px] font-normal text-gray-400 uppercase">(Month/Date)</span></label>
+                  <input 
+                    type="text" 
+                    value={payMonth}
+                    onChange={(e) => setPayMonth(e.target.value)}
+                    placeholder="e.g. August 2026"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all font-bold text-gray-900" 
+                    required 
+                  />
+                </div>
+                
+                <div className="pt-4 flex justify-end space-x-3">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 text-sm">
+                    বাতিল
+                  </button>
+                  <button type="submit" disabled={loading} className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-bold shadow-sm text-sm disabled:opacity-50">
+                    <Save size={18} />
+                    <span>{loading ? "Processing..." : "নিশ্চিত করুন (Confirm)"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
