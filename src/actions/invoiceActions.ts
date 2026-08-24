@@ -124,9 +124,9 @@ export async function createInvoice(data: {
     revalidatePath("/clients");
     
     return { success: true, invoice: result };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating invoice:", error);
-    return { success: false, error: "Failed to create invoice" };
+    return { success: false, error: error.message || "Failed to create invoice" };
   }
 }
 
