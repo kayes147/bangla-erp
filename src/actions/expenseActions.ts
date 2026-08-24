@@ -19,10 +19,16 @@ export async function addExpense(data: {
 
     const expense = await prisma.expense.create({
       data: {
-        category: data.category,
+        category: {
+          connectOrCreate: {
+            where: { name: data.category },
+            create: { name: data.category }
+          }
+        },
         amount: data.amount,
         description: data.description,
         isPersonal: data.isPersonal,
+        paymentMethod: "cash", // Added default to fix missing field
         requestedBy: data.requestedBy,
         status: status,
       },
@@ -56,8 +62,15 @@ export async function getExpenses() {
   try {
     const expenses = await prisma.expense.findMany({
       orderBy: { date: "desc" },
+      include: { category: true }
     });
-    return { success: true, expenses };
+    
+    const formattedExpenses = expenses.map(e => ({
+      ...e,
+      category: e.category.name
+    }));
+
+    return { success: true, expenses: formattedExpenses };
   } catch (error) {
     console.error("Error fetching expenses:", error);
     return { success: false, error: "Failed to fetch expenses", expenses: [] };
