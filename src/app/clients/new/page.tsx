@@ -13,14 +13,16 @@ export default function AddNewClient() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [amount, setAmount] = useState("0");
-  const [balanceType, setBalanceType] = useState("receivable");
+  const [balanceType, setBalanceType] = useState("none");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     let openingBalance = parseFloat(amount) || 0;
-    if (balanceType === "payable") {
+    if (balanceType === "none") {
+      openingBalance = 0;
+    } else if (balanceType === "payable") {
       openingBalance = -Math.abs(openingBalance);
     } else {
       openingBalance = Math.abs(openingBalance);
@@ -93,9 +95,9 @@ export default function AddNewClient() {
             </div>
 
             {/* Opening Balance */}
-            <div>
+            <div className={balanceType === 'none' ? 'opacity-50' : ''}>
               <label className="block text-sm font-bold text-gray-700 mb-2">আগের বাকী <span className="text-[10px] font-normal text-gray-400 uppercase">(Previous Due)</span></label>
-              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="৳ 0.00" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-900" />
+              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={balanceType === 'none'} placeholder="৳ 0.00" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-900 disabled:bg-gray-100" />
               <p className="text-[10px] text-gray-500 mt-1 uppercase font-medium">If they already owe you money or you owe them.</p>
             </div>
 
@@ -103,6 +105,7 @@ export default function AddNewClient() {
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">টাকার ধরন <span className="text-[10px] font-normal text-gray-400 uppercase">(Balance Type)</span></label>
               <select value={balanceType} onChange={(e) => setBalanceType(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-800">
+                <option value="none">কোনো পূর্বের বকেয়া নেই (No Previous Due)</option>
                 <option value="receivable">আমি টাকা পাবো (I will get money)</option>
                 <option value="payable">আমাকে টাকা দিতে হবে (I have to pay)</option>
               </select>
