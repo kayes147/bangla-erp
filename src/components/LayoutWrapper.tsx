@@ -15,9 +15,10 @@ export default function LayoutWrapper({
   // Pages that should NOT have the Sidebar and TopNav
   const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/portal/login" || pathname === "/select-company";
   
+  const isSuperAdmin = pathname.startsWith("/super-admin");
   const isClientPortal = pathname.startsWith("/portal") && !isAuthPage;
 
-  if (isAuthPage) {
+  if (isAuthPage || isSuperAdmin) {
     return (
       <div className="w-full h-full overflow-auto bg-slate-900">
         {children}
