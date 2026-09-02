@@ -61,11 +61,31 @@ export default function AddNewClient() {
           
           {/* Client Type */}
           <div className="pb-6 border-b border-gray-100">
-            <label className="block text-sm font-bold text-gray-700 mb-3">ধরন <span className="text-[10px] font-normal text-gray-400 uppercase">(Type)</span></label>
+            <label className="block text-sm font-bold text-gray-700 mb-3">
+              ধরন <span className="text-[10px] font-normal text-gray-400 uppercase">(Type)</span>
+            </label>
             <div className="flex space-x-4">
-              <label className="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg font-bold transition-colors border-indigo-200 bg-indigo-50 text-indigo-700">
-                <input type="radio" name="client_type" value="supplier" checked={true} readOnly className="text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+              <label className={`flex items-center space-x-2 cursor-pointer p-3 border rounded-lg font-bold transition-colors ${type === 'supplier' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600'}`}>
+                <input 
+                  type="radio" 
+                  name="client_type" 
+                  value="supplier" 
+                  checked={type === "supplier"} 
+                  onChange={() => setType("supplier")} 
+                  className="text-indigo-600 focus:ring-indigo-500 w-4 h-4" 
+                />
                 <span>মহাজন <span className="font-normal opacity-80">(Supplier)</span></span>
+              </label>
+              <label className={`flex items-center space-x-2 cursor-pointer p-3 border rounded-lg font-bold transition-colors ${type === 'customer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
+                <input 
+                  type="radio" 
+                  name="client_type" 
+                  value="customer" 
+                  checked={type === "customer"} 
+                  onChange={() => setType("customer")} 
+                  className="text-blue-600 focus:ring-blue-500 w-4 h-4" 
+                />
+                <span>কাস্টমার / গ্রাহক <span className="font-normal opacity-80">(Customer)</span></span>
               </label>
             </div>
           </div>

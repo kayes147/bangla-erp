@@ -3,6 +3,7 @@ import { useState } from "react";
 import { PackageMinus, Search, Save, CalendarDays, Printer, FileEdit } from "lucide-react";
 import { createInvoice } from "@/actions/invoiceActions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import PrintableInvoiceModal from "@/components/PrintableInvoiceModal";
 import CorrectionRequestModal from "@/components/CorrectionRequestModal";
 
@@ -70,16 +71,25 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
             
             {/* Customer */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">কাস্টমার / গ্রাহক <span className="text-[10px] font-normal text-gray-400 uppercase">(Customer)</span> <span className="text-red-500">*</span></label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-bold text-gray-700">
+                  কাস্টমার / গ্রাহক <span className="text-[10px] font-normal text-gray-400 uppercase">(Customer / Party)</span> <span className="text-red-500">*</span>
+                </label>
+                <Link href="/clients/new" className="text-xs font-bold text-blue-600 hover:underline">
+                  + নতুন কাস্টমার / মহাজন
+                </Link>
+              </div>
               <select 
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
                 className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 required
               >
-                <option value="">Select Customer...</option>
+                <option value="">কাস্টমার বা মহাজন সিলেক্ট করুন...</option>
                 {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.type === "customer" ? "কাস্টমার" : "মহাজন"} • {c.phone})
+                  </option>
                 ))}
               </select>
             </div>

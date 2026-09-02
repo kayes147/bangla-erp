@@ -12,13 +12,13 @@ export default async function ProductInPage() {
   const { invoices } = await getInvoices("product_in");
   const { clients } = await getClients();
   
-  // Filter for suppliers only
-  const suppliers = (clients || []).filter(c => c.type === "supplier");
+  // Allow all registered parties
+  const allClients = clients || [];
 
   return (
     <ProductInClient 
       initialInvoices={invoices || []} 
-      clients={suppliers} 
+      clients={allClients} 
       userRole={mockRole} 
     />
   );

@@ -12,13 +12,13 @@ export default async function ProductOutPage() {
   const { invoices } = await getInvoices("product_out");
   const { clients } = await getClients();
   
-  // Filter for customers only (or allow all)
-  const customers = (clients || []).filter(c => c.type === "customer");
+  // Allow all registered parties (both customers and suppliers) so user can sell to any party
+  const allClients = clients || [];
 
   return (
     <ProductOutClient 
       initialInvoices={invoices || []} 
-      clients={customers} 
+      clients={allClients} 
       userRole={mockRole} 
     />
   );
