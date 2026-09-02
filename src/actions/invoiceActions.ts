@@ -104,11 +104,17 @@ export async function createInvoice(data: {
         
         // If money changed hands, record it in Main Cash
         if (data.paidAmount > 0) {
+          const client = await tx.client.findUnique({ where: { id: data.clientId } });
+          const clientName = client?.name || "Client";
+          const typeLabel = data.type === "product_in" 
+            ? `পণ্য ক্রয় (মহাজন: ${clientName})` 
+            : `পণ্য বিক্রয় (কাস্টমার: ${clientName})`;
+
           await tx.transaction.create({
             data: {
               type: data.type === "product_in" ? "out" : "in", // If we buy, cash goes out. If sell, cash comes in.
               amount: data.paidAmount,
-              description: `Payment for Invoice #${invoice.id.substring(0, 8)}`,
+              description: typeLabel,
               status: "APPROVED",
               clientId: data.clientId,
               invoiceId: invoice.id,

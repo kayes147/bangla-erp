@@ -219,21 +219,48 @@ export default async function Home() {
                 </tr>
               </thead>
               <tbody>
-                {allTransactions.slice(0, 5).reverse().map((t) => (
-                  <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${t.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {t.type === 'in' ? 'Cash In' : 'Cash Out'}
-                      </span>
-                    </td>
-                    <td className="p-4 font-medium text-gray-800">{t.description}</td>
-                    <td className="p-4">{t.date.toLocaleDateString()}</td>
-                    <td className="p-4 font-bold text-gray-800">৳ {t.amount.toLocaleString()}</td>
-                    <td className="p-4">
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">{t.status}</span>
-                    </td>
-                  </tr>
-                ))}
+                {allTransactions.slice(0, 5).reverse().map((t) => {
+                  const invoiceIdFromDesc = t.description?.match(/#([a-zA-Z0-9]+)/)?.[1];
+                  const rawInvId = t.invoiceId || invoiceIdFromDesc;
+                  const displayInvId = rawInvId ? `#${rawInvId.slice(-8)}` : null;
+
+                  const clientName = (t as any).client?.name || (t as any).invoice?.client?.name;
+
+                  let mainDesc = t.description;
+                  if (t.description.startsWith("Payment for Invoice")) {
+                    mainDesc = clientName 
+                      ? (t.type === "out" ? `পণ্য ক্রয় (মহাজন: ${clientName})` : `পণ্য বিক্রয় (কাস্টমার: ${clientName})`)
+                      : "চালান পরিশোধ";
+                  }
+
+                  return (
+                    <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="p-4">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${t.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {t.type === 'in' ? 'Cash In' : 'Cash Out'}
+                        </span>
+                      </td>
+                      <td className="p-4 font-medium text-gray-800">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-bold text-gray-900">{mainDesc}</span>
+                          {displayInvId && (
+                            <span 
+                              className="shrink-0 px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-mono font-bold rounded"
+                              title={`Invoice ${displayInvId}`}
+                            >
+                              {displayInvId}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">{t.date.toLocaleDateString()}</td>
+                      <td className="p-4 font-bold text-gray-800">৳ {t.amount.toLocaleString()}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">{t.status}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {allTransactions.length === 0 && (
                   <tr>
                     <td colSpan={5} className="p-4 text-center text-gray-500 font-medium">No transactions yet.</td>

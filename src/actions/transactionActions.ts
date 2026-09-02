@@ -70,6 +70,11 @@ export async function getTransactions() {
       orderBy: { date: "desc" },
       include: {
         client: true,
+        invoice: {
+          include: {
+            client: true,
+          },
+        },
       },
     });
 

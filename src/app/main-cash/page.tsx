@@ -96,23 +96,59 @@ export default async function MainCash() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {formattedTransactions.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="p-4 text-xs text-gray-500 font-medium">
-                    {new Date(t.date).toLocaleDateString()} {new Date(t.date).toLocaleTimeString()}
-                  </td>
-                  <td className="p-4 text-gray-800 font-medium">
-                    {t.description} 
-                    {t.status === "PENDING" && <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded">Pending Request</span>}
-                  </td>
-                  <td className="p-4 text-right font-bold text-green-600">
-                    {t.type === "in" ? `৳ ${t.amount.toLocaleString()}` : "-"}
-                  </td>
-                  <td className="p-4 text-right font-bold text-red-600">
-                    {t.type === "out" ? `৳ ${t.amount.toLocaleString()}` : "-"}
-                  </td>
-                </tr>
-              ))}
+              {formattedTransactions.map((t) => {
+                // Extract invoice ID
+                const invoiceIdFromDesc = t.description?.match(/#([a-zA-Z0-9]+)/)?.[1];
+                const rawInvId = t.invoiceId || invoiceIdFromDesc;
+                const displayInvId = rawInvId ? `#${rawInvId.slice(-8)}` : null;
+
+                // Client / Mahajon name
+                const clientName = t.client?.name || (t as any).invoice?.client?.name;
+
+                // Format clean description
+                let mainDesc = t.description;
+                if (t.description.startsWith("Payment for Invoice")) {
+                  mainDesc = clientName 
+                    ? (t.type === "out" ? `পণ্য ক্রয় (মহাজন: ${clientName})` : `পণ্য বিক্রয় (কাস্টমার: ${clientName})`)
+                    : "চালান পরিশোধ";
+                }
+
+                return (
+                  <tr key={t.id} className="hover:bg-gray-50">
+                    <td className="p-4 text-xs text-gray-500 font-medium whitespace-nowrap">
+                      {new Date(t.date).toLocaleDateString()} {new Date(t.date).toLocaleTimeString()}
+                    </td>
+                    <td className="p-4 text-gray-800 font-medium">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center space-x-2 flex-wrap">
+                          <span className="font-bold text-gray-900">
+                            {mainDesc}
+                          </span>
+                          {t.status === "PENDING" && (
+                            <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded">
+                              Pending Request
+                            </span>
+                          )}
+                        </div>
+                        {displayInvId && (
+                          <span 
+                            className="shrink-0 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-mono font-bold rounded-md shadow-xs transition-colors"
+                            title={`Invoice ${displayInvId}`}
+                          >
+                            {displayInvId}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 text-right font-bold text-green-600 whitespace-nowrap">
+                      {t.type === "in" ? `৳ ${t.amount.toLocaleString()}` : "-"}
+                    </td>
+                    <td className="p-4 text-right font-bold text-red-600 whitespace-nowrap">
+                      {t.type === "out" ? `৳ ${t.amount.toLocaleString()}` : "-"}
+                    </td>
+                  </tr>
+                );
+              })}
               {formattedTransactions.length === 0 && (
                  <tr>
                     <td colSpan={4} className="p-8 text-center text-gray-400 font-medium">No transactions found.</td>
