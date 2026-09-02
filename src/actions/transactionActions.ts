@@ -15,40 +15,52 @@ export async function addTransaction(data: {
     const transaction = await prisma.transaction.create({
       data: {
         type: data.type,
-        amount: data.amount,
+        amount: Number(data.amount),
         description: data.description,
-        requestedBy: data.requestedBy,
-        clientId: data.clientId,
-        status: "APPROVED", // Assuming direct add is approved for Owner. We can handle pending logic later.
+        requestedBy: data.requestedBy || "owner",
+        clientId: data.clientId ? data.clientId : undefined,
+        status: "APPROVED",
       },
     });
 
     // If client is involved, update their balance
     if (data.clientId) {
-      await prisma.client.update({
-        where: { id: data.clientId },
-        data: {
-          openingBalance:
-            data.type === "in"
-              ? { decrement: data.amount } // Receiving money decreases client debt
-              : { increment: data.amount }, // Giving money increases client debt
-        },
-      });
+      try {
+        await prisma.client.update({
+          where: { id: data.clientId },
+          data: {
+            openingBalance:
+              data.type === "in"
+                ? { decrement: Number(data.amount) }
+                : { increment: Number(data.amount) },
+          },
+        });
+      } catch (err) {
+        console.warn("Client balance update warning:", err);
+      }
     }
 
-    revalidatePath("/main-cash");
-    revalidatePath("/");
+    try {
+      revalidatePath("/main-cash");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidate path warning:", e);
+    }
 
-    await recordAuditLog(
-      data.requestedBy || "owner",
-      "ADD_TRANSACTION",
-      `Added Cash ${data.type === "in" ? "In" : "Out"} of ৳${data.amount.toLocaleString()} - "${data.description}"`
-    );
+    try {
+      await recordAuditLog(
+        data.requestedBy || "owner",
+        "ADD_TRANSACTION",
+        `Added Cash ${data.type === "in" ? "In" : "Out"} of ৳${Number(data.amount).toLocaleString()} - "${data.description}"`
+      );
+    } catch (e) {
+      console.warn("Audit log recording warning:", e);
+    }
 
     return { success: true, transaction };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding transaction:", error);
-    return { success: false, error: "Failed to add transaction" };
+    return { success: false, error: error?.message || "Failed to add transaction" };
   }
 }
 
@@ -58,11 +70,12 @@ export async function getTransactions() {
       orderBy: { date: "desc" },
       include: {
         client: true,
-      }
+      },
     });
+
     return { success: true, transactions };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching transactions:", error);
-    return { success: false, error: "Failed to fetch transactions" };
+    return { success: false, transactions: [] };
   }
 }
