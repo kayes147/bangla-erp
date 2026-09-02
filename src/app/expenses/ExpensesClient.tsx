@@ -245,20 +245,20 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                       <span>ক্যাটাগরি <span className="text-[10px] font-normal text-gray-400 uppercase">(Category)</span> <span className="text-red-500">*</span></span>
                     </label>
                     {isPersonalExpense ? (
-                      <div className="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 font-medium">Owner&apos;s Personal Account</div>
+                      <div className="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-900 font-bold">Owner&apos;s Personal Account</div>
                     ) : (
                       <select 
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all font-medium" 
+                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-gray-900 bg-white" 
                         required
                       >
-                        <option value="">নির্বাচন করুন (Select)</option>
-                        <option value="Tea & Snacks">চা-নাস্তা (Tea & Snacks)</option>
-                        <option value="Transport">যাতায়াত (Transport)</option>
-                        <option value="Utility Bills">বিদ্যুৎ/গ্যাস (Utility Bills)</option>
-                        <option value="Maintenance">মেরামত (Maintenance)</option>
-                        <option value="Other">অন্যান্য (Other)</option>
+                        <option value="" className="text-gray-500">নির্বাচন করুন (Select)</option>
+                        <option value="Tea & Snacks" className="text-gray-900">চা-নাস্তা (Tea & Snacks)</option>
+                        <option value="Transport" className="text-gray-900">যাতায়াত (Transport)</option>
+                        <option value="Utility Bills" className="text-gray-900">বিদ্যুৎ/গ্যাস (Utility Bills)</option>
+                        <option value="Maintenance" className="text-gray-900">মেরামত (Maintenance)</option>
+                        <option value="Other" className="text-gray-900">অন্যান্য (Other)</option>
                       </select>
                     )}
                   </div>
@@ -271,7 +271,7 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                       placeholder="৳ 0.00" 
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-gray-900" 
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-gray-900 bg-white placeholder-gray-400" 
                       required 
                     />
                   </div>
@@ -281,10 +281,10 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                     <label className="block text-sm font-bold text-gray-700 mb-1">বিস্তারিত বিবরণ <span className="text-[10px] font-normal text-gray-400 uppercase">(Description)</span> <span className="text-red-500">*</span></label>
                     <textarea 
                       rows={2} 
-                      placeholder="Write the details of this expense..." 
+                      placeholder="খরচের বিস্তারিত বিবরণ লিখুন..." 
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all" 
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all font-medium text-gray-900 bg-white placeholder-gray-400" 
                       required
                     ></textarea>
                   </div>
