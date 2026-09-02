@@ -64,9 +64,13 @@
 - Interactive Login screen (`/login`) with 1-click Demo switchers (Owner / Manager).
 - Registration flow (`/register`) linked to database.
 
+### 13. Supabase PostgreSQL & Serverless Runtime Fixes
+- Migrated schema to PostgreSQL via Supabase Session Pooler (port 5432).
+- Enabled Row Level Security (RLS) across all public tables.
+- Injected `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, and `AUTH_TRUST_HOST` into `next.config.ts`'s `env` object so Vercel server actions always receive the database connection string at runtime.
+
 ---
 
 ## ⏳ Next Level Upgrades (Optional Roadmap)
 1. **Multi-Company Tenancy:** Full database-level tenant separation for `/select-company` and `/super-admin`.
-2. **Online Database:** Migrate from SQLite prototype to Neon Postgres or Supabase for distributed production scaling.
-3. **SMS Notification:** Integrate SMS gateway (e.g., Greenweb/Elitbuzz) for invoice SMS to clients.
+2. **SMS Notification:** Integrate SMS gateway (e.g., Greenweb/Elitbuzz) for invoice SMS to clients.
