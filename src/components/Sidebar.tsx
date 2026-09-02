@@ -60,7 +60,7 @@ export default function Sidebar() {
         </div>
         {/* -------------------------------- */}
         
-        {/* HR & Administration Dropdown */}
+        {/* Employee Dropdown */}
         <div>
           <button 
             onClick={() => setIsHrOpen(!isHrOpen)} 
@@ -69,7 +69,7 @@ export default function Sidebar() {
             <div className="flex items-center space-x-3">
               <UserCog size={18} />
               <div className="text-left">
-                <span>এইচআর <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(HR & Admin)</span></span>
+                <span>কর্মী <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Employees)</span></span>
               </div>
             </div>
             {isHrOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -83,17 +83,11 @@ export default function Sidebar() {
               <Link href="/hr/attendance" className="block p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
                 হাজিরা ও শিফট <span className="text-[10px] font-normal text-slate-500 block">(Attendance & Shift)</span>
               </Link>
-              <Link href="/hr/leave" className="block p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
-                ছুটি ব্যবস্থাপনা <span className="text-[10px] font-normal text-slate-500 block">(Leave Management)</span>
-              </Link>
               <Link href="/hr/payroll" className="block p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
                 বেতন ও পে-রোল <span className="text-[10px] font-normal text-slate-500 block">(Payroll Control)</span>
               </Link>
               <Link href="/hr/documents" className="block p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
                 নথিপত্র <span className="text-[10px] font-normal text-slate-500 block">(HR Documents)</span>
-              </Link>
-              <Link href="/hr/departments" className="block p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
-                বিভাগ ও পদবি <span className="text-[10px] font-normal text-slate-500 block">(Departments & Roles)</span>
               </Link>
             </div>
           )}
