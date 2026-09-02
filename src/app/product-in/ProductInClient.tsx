@@ -17,14 +17,21 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<any | null>(null);
   const [correctionInvoiceId, setCorrectionInvoiceId] = useState<string | null>(null);
 
   const totalAmount = (parseFloat(quantity) || 0) * (parseFloat(price) || 0);
+  const calculatedPaid = parseFloat(paidAmount) || 0;
+  const dueAmount = Math.max(0, totalAmount - calculatedPaid);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientId || !productName || !quantity || !price) return;
+    if (dueAmount > 0 && !dueDate) {
+      alert("অনুগ্রহ করে বকেয়া পরিশোধের তারিখ বেছে দিন (Please select payment due date)");
+      return;
+    }
 
     setLoading(true);
     const status = userRole === "owner" ? "APPROVED" : "PENDING";
@@ -37,9 +44,10 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
         quantity: parseInt(quantity),
         pricePerUnit: parseFloat(price)
       }],
-      paidAmount: parseFloat(paidAmount) || 0,
+      paidAmount: calculatedPaid,
       requestedBy: userRole,
-      status
+      status,
+      dueDate: dueAmount > 0 ? dueDate : undefined,
     });
 
     setLoading(false);
@@ -48,6 +56,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
       setQuantity("");
       setPrice("");
       setPaidAmount("");
+      setDueDate("");
       router.refresh();
     } else {
       alert("Error: " + res.error);
@@ -154,7 +163,37 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
             </div>
           </div>
 
-          <div className="pt-4 flex justify-end">
+          {/* Due Info & Payment Due Date Field (Only if there is due) */}
+          {dueAmount > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">
+                  বকেয়া হিসাব (Due Amount)
+                </span>
+                <span className="text-2xl font-bold text-amber-900">
+                  ৳ {dueAmount.toLocaleString()}
+                </span>
+                <span className="text-xs text-amber-700 block mt-0.5">
+                  মহাজনকে এই বাকি টাকা পরবর্তীতে পরিশোধ করতে হবে।
+                </span>
+              </div>
+              <div className="w-full sm:w-80">
+                <label className="block text-xs font-bold text-gray-800 mb-1">
+                  বকেয়া পরিশোধের তারিখ <span className="text-red-500">*</span>
+                  <span className="text-[10px] font-normal text-gray-500 block uppercase">(Promised Payment Date)</span>
+                </label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full p-2.5 border border-amber-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-gray-900 bg-white"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="pt-2 flex justify-end">
             <button type="submit" disabled={loading} className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-lg font-bold text-lg transition-colors shadow-sm">
               <Save size={20} />
               <span>{loading ? "Saving..." : "সেভ করুন (Save Entry)"}</span>
@@ -195,7 +234,19 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
                   <td className="p-4 text-center font-bold text-gray-800">
                     {inv.items.reduce((acc: number, curr: any) => acc + curr.quantity, 0)}
                   </td>
-                  <td className="p-4 text-right font-bold text-emerald-600">৳ {inv.totalAmount.toLocaleString()}</td>
+                  <td className="p-4 text-right">
+                    <div className="font-bold text-emerald-600">৳ {inv.totalAmount.toLocaleString()}</div>
+                    {inv.totalAmount > inv.paidAmount && (
+                      <div className="text-[11px] text-red-600 font-bold mt-0.5">
+                        বাকি: ৳{(inv.totalAmount - inv.paidAmount).toLocaleString()}
+                        {inv.dueDate && (
+                          <span className="block text-[10px] text-amber-700 font-medium">
+                            পরিশোধ: {new Date(inv.dueDate).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="p-4 text-right">
                     {inv.status === 'APPROVED' ? (
                       <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Approved</span>

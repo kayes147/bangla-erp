@@ -15,6 +15,7 @@ export async function createInvoice(data: {
   paidAmount: number;
   requestedBy: string;
   status: string; // PENDING for manager/client, APPROVED for owner
+  dueDate?: string; // Optional promised payment date for remaining dues
 }) {
   try {
     let totalAmount = 0;
@@ -77,6 +78,7 @@ export async function createInvoice(data: {
           paymentStatus,
           status: data.status,
           requestedBy: data.requestedBy,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
           items: {
             create: processedItems
           }
@@ -119,22 +121,32 @@ export async function createInvoice(data: {
       return invoice;
     });
 
-    revalidatePath("/product-in");
-    revalidatePath("/product-out");
-    revalidatePath("/main-cash");
-    revalidatePath("/clients");
+    try {
+      revalidatePath("/product-in");
+      revalidatePath("/product-out");
+      revalidatePath("/main-cash");
+      revalidatePath("/clients");
+      revalidatePath("/loan");
+      revalidatePath("/");
+    } catch (revalErr) {
+      console.warn("Revalidate warning:", revalErr);
+    }
     
     // Record audit log
-    await recordAuditLog(
-      data.requestedBy || "manager",
-      data.type === "product_in" ? "CREATE_INVOICE_IN" : "CREATE_INVOICE_OUT",
-      `Created ${data.type === "product_in" ? "Product In" : "Product Out"} Invoice #${result.id.slice(0, 8)} for ৳${result.totalAmount.toLocaleString()} (${data.status})`
-    );
+    try {
+      await recordAuditLog(
+        data.requestedBy || "manager",
+        data.type === "product_in" ? "CREATE_INVOICE_IN" : "CREATE_INVOICE_OUT",
+        `Created ${data.type === "product_in" ? "Product In" : "Product Out"} Invoice #${result.id.slice(0, 8)} for ৳${result.totalAmount.toLocaleString()} (${data.status})`
+      );
+    } catch (auditErr) {
+      console.warn("Audit log warning:", auditErr);
+    }
 
     return { success: true, invoice: result };
   } catch (error: any) {
     console.error("Error creating invoice:", error);
-    return { success: false, error: error.message || "Failed to create invoice" };
+    return { success: false, error: error?.message || "Failed to create invoice" };
   }
 }
 
@@ -156,5 +168,114 @@ export async function getInvoices(type: string) {
   } catch (error) {
     console.error("Error fetching invoices:", error);
     return { success: false, invoices: [] };
+  }
+}
+
+export async function getDueInvoices() {
+  try {
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        paymentStatus: { in: ["due", "partial"] },
+        status: "APPROVED",
+      },
+      orderBy: { date: "desc" },
+      include: {
+        client: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+    return { success: true, invoices };
+  } catch (error) {
+    console.error("Error fetching due invoices:", error);
+    return { success: false, invoices: [] };
+  }
+}
+
+export async function settleInvoiceDue(data: {
+  invoiceId: string;
+  amount: number;
+  paymentMethod?: string;
+  requestedBy?: string;
+}) {
+  try {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: data.invoiceId },
+      include: { client: true },
+    });
+
+    if (!invoice) return { success: false, error: "Invoice not found" };
+
+    const remainingDue = invoice.totalAmount - invoice.paidAmount;
+    if (data.amount <= 0 || data.amount > remainingDue) {
+      return { success: false, error: "সঠিক টাকার পরিমাণ দিন (বকেয়ার চেয়ে বেশি দেওয়া যাবে না)" };
+    }
+
+    const newPaidAmount = invoice.paidAmount + Number(data.amount);
+    const newPaymentStatus = newPaidAmount >= invoice.totalAmount ? "paid" : "partial";
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Update invoice
+      await tx.invoice.update({
+        where: { id: data.invoiceId },
+        data: {
+          paidAmount: newPaidAmount,
+          paymentStatus: newPaymentStatus,
+        },
+      });
+
+      // 2. Update client balance
+      await tx.client.update({
+        where: { id: invoice.clientId },
+        data: {
+          openingBalance: invoice.type === "product_in"
+            ? { increment: Number(data.amount) }
+            : { decrement: Number(data.amount) },
+        },
+      });
+
+      // 3. Record in Main Cash
+      await tx.transaction.create({
+        data: {
+          type: invoice.type === "product_in" ? "out" : "in",
+          amount: Number(data.amount),
+          description: `[বকেয়া পরিশোধ] Invoice #${invoice.id.substring(0, 8)} (${invoice.client.name})`,
+          status: "APPROVED",
+          clientId: invoice.clientId,
+          invoiceId: invoice.id,
+          requestedBy: data.requestedBy || "owner",
+        },
+      });
+    });
+
+    try {
+      revalidatePath("/loan");
+      revalidatePath("/due");
+      revalidatePath("/main-cash");
+      revalidatePath("/clients");
+      revalidatePath("/product-in");
+      revalidatePath("/product-out");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidate warning:", e);
+    }
+
+    try {
+      await recordAuditLog(
+        data.requestedBy || "owner",
+        "SETTLE_DUE",
+        `Settled due of ৳${Number(data.amount).toLocaleString()} for Invoice #${invoice.id.substring(0, 8)} (${invoice.client.name})`
+      );
+    } catch (e) {
+      console.warn("Audit log warning:", e);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error settling invoice due:", error);
+    return { success: false, error: error?.message || "Failed to settle due" };
   }
 }

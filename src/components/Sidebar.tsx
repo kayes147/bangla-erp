@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { useState } from 'react';
-import { Home, PackagePlus, PackageMinus, Wallet, Receipt, Landmark, Users, Settings, UserCog, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
+import { Home, PackagePlus, PackageMinus, Wallet, Receipt, Landmark, Users, Settings, UserCog, ChevronDown, ChevronUp, LogOut, CalendarClock } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
 export default function Sidebar() {
@@ -39,8 +39,8 @@ export default function Sidebar() {
           <span>মহাজন ও কাস্টমার <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Suppliers & Customers)</span></span>
         </Link>
         <Link href="/loan" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
-          <Landmark size={18} />
-          <span>লোন <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Loan)</span></span>
+          <CalendarClock size={18} />
+          <span>বকেয়া <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Due / বাকির হিসাব)</span></span>
         </Link>
 
         {/* --- OWNER ONLY SECTION (MOCK) --- */}

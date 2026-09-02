@@ -1,373 +1,356 @@
 "use client";
 
 import { useState } from "react";
-import { Landmark, Plus, Search, ArrowDownToLine, ArrowUpFromLine, User, X, Save, RefreshCw } from "lucide-react";
-import { createLoan, recordLoanRepayment } from "@/actions/loanActions";
-
-interface ProfileItem {
-  name: string;
-  personType: string;
-  phone: string;
-  netBalance: number;
-  lastDate: Date | string;
-}
-
-interface ClientOption {
-  id: string;
-  name: string;
-  phone: string;
-  type: string;
-}
-
-interface EmployeeOption {
-  id: string;
-  name: string;
-  phone: string;
-}
+import { 
+  CalendarClock, 
+  Search, 
+  ArrowDownToLine, 
+  ArrowUpFromLine, 
+  Printer, 
+  CheckCircle2, 
+  AlertCircle, 
+  X, 
+  Save, 
+  Clock, 
+  Filter 
+} from "lucide-react";
+import { settleInvoiceDue } from "@/actions/invoiceActions";
+import { useRouter } from "next/navigation";
+import PrintableInvoiceModal from "@/components/PrintableInvoiceModal";
 
 export default function LoanClient({
-  initialProfiles,
-  totalGiven,
-  totalTaken,
+  initialInvoices,
   clients,
-  employees,
 }: {
-  initialProfiles: ProfileItem[];
-  totalGiven: number;
-  totalTaken: number;
-  clients: ClientOption[];
-  employees: EmployeeOption[];
+  initialInvoices: any[];
+  clients: any[];
 }) {
-  const [isGiveLoanModalOpen, setIsGiveLoanModalOpen] = useState(false);
-  const [isReceiveLoanModalOpen, setIsReceiveLoanModalOpen] = useState(false);
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
+  const [filterTab, setFilterTab] = useState<"all" | "product_in" | "product_out" | "overdue">("all");
+  const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<any | null>(null);
+
+  // Settle Due Modal State
+  const [settleModalOpen, setSettleModalOpen] = useState(false);
+  const [selectedInvoiceToSettle, setSelectedInvoiceToSettle] = useState<any | null>(null);
+  const [settleAmount, setSettleAmount] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Give Loan Form State
-  const [giveType, setGiveType] = useState<"GIVE" | "TAKE">("GIVE");
-  const [givePersonType, setGivePersonType] = useState<"CLIENT" | "EMPLOYEE" | "OTHER">("CLIENT");
-  const [selectedPersonId, setSelectedPersonId] = useState("");
-  const [customName, setCustomName] = useState("");
-  const [customPhone, setCustomPhone] = useState("");
-  const [giveAmount, setGiveAmount] = useState("");
-  const [giveDate, setGiveDate] = useState(new Date().toISOString().split("T")[0]);
-  const [giveNotes, setGiveNotes] = useState("");
-  const [giveMethod, setGiveMethod] = useState("cash");
+  // Today calculation for overdue checks
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
 
-  // Receive Loan Form State
-  const [receiveDirection, setReceiveDirection] = useState<"RECEIVE_BACK" | "PAY_BACK">("RECEIVE_BACK");
-  const [receivePersonType, setReceivePersonType] = useState<"CLIENT" | "EMPLOYEE" | "OTHER">("CLIENT");
-  const [receivePersonId, setReceivePersonId] = useState("");
-  const [receiveCustomName, setReceiveCustomName] = useState("");
-  const [receiveAmount, setReceiveAmount] = useState("");
-  const [receiveDate, setReceiveDate] = useState(new Date().toISOString().split("T")[0]);
-  const [receiveMethod, setReceiveMethod] = useState("cash");
-  const [receiveNotes, setReceiveNotes] = useState("");
+  const threeDaysFromNow = new Date(now);
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
-  const handleGiveLoanSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!giveAmount || Number(giveAmount) <= 0) {
-      alert("সঠিক টাকার পরিমাণ দিন!");
-      return;
-    }
+  // Calculate stats
+  let totalSupplierDue = 0; // We owe suppliers (Product In)
+  let totalCustomerDue = 0; // Customers owe us (Product Out)
+  let overdueCount = 0;
 
-    let personName = customName;
-    let phone = customPhone;
-    let clientId = undefined;
-    let employeeId = undefined;
-
-    if (givePersonType === "CLIENT") {
-      const found = clients.find((c) => c.id === selectedPersonId);
-      if (!found && !customName) {
-        alert("অনুগ্রহ করে ক্লায়েন্ট বা মহাজন নির্বাচন করুন!");
-        return;
-      }
-      if (found) {
-        personName = found.name;
-        phone = found.phone;
-        clientId = found.id;
-      }
-    } else if (givePersonType === "EMPLOYEE") {
-      const found = employees.find((em) => em.id === selectedPersonId);
-      if (!found && !customName) {
-        alert("অনুগ্রহ করে কর্মচারী নির্বাচন করুন!");
-        return;
-      }
-      if (found) {
-        personName = found.name;
-        phone = found.phone;
-        employeeId = found.id;
-      }
-    }
-
-    if (!personName) {
-      alert("নাম প্রদান করুন!");
-      return;
-    }
-
-    setLoading(true);
-    const res = await createLoan({
-      type: giveType,
-      personType: givePersonType,
-      personName,
-      phone,
-      amount: Number(giveAmount),
-      notes: giveNotes,
-      paymentMethod: giveMethod,
-      date: giveDate,
-      clientId,
-      employeeId,
-      requestedBy: "owner",
-    });
-    setLoading(false);
-
-    if (res.success) {
-      alert("লেনদেন সফলভাবে সংরক্ষিত হয়েছে!");
-      setIsGiveLoanModalOpen(false);
-      setGiveAmount("");
-      setGiveNotes("");
-      setCustomName("");
-      setCustomPhone("");
+  initialInvoices.forEach((inv) => {
+    const due = Math.max(0, inv.totalAmount - inv.paidAmount);
+    if (inv.type === "product_in") {
+      totalSupplierDue += due;
     } else {
-      alert(res.error || "ব্যর্থ হয়েছে");
-    }
-  };
-
-  const handleReceivePaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!receiveAmount || Number(receiveAmount) <= 0) {
-      alert("সঠিক টাকার পরিমাণ দিন!");
-      return;
+      totalCustomerDue += due;
     }
 
-    let personName = receiveCustomName;
-    let phone = "";
-    let clientId = undefined;
-    let employeeId = undefined;
-
-    if (receivePersonType === "CLIENT") {
-      const found = clients.find((c) => c.id === receivePersonId);
-      if (found) {
-        personName = found.name;
-        phone = found.phone;
-        clientId = found.id;
-      }
-    } else if (receivePersonType === "EMPLOYEE") {
-      const found = employees.find((em) => em.id === receivePersonId);
-      if (found) {
-        personName = found.name;
-        phone = found.phone;
-        employeeId = found.id;
-      }
+    if (inv.dueDate && new Date(inv.dueDate) < now && due > 0) {
+      overdueCount++;
     }
-
-    if (!personName) {
-      alert("নাম প্রদান করুন!");
-      return;
-    }
-
-    setLoading(true);
-    const res = await recordLoanRepayment({
-      direction: receiveDirection,
-      personType: receivePersonType,
-      personName,
-      phone,
-      amount: Number(receiveAmount),
-      notes: receiveNotes,
-      paymentMethod: receiveMethod,
-      date: receiveDate,
-      clientId,
-      employeeId,
-      requestedBy: "owner",
-    });
-    setLoading(false);
-
-    if (res.success) {
-      alert("ধারের টাকা ফেরত গ্রহণ সফলভাবে সংরক্ষিত হয়েছে!");
-      setIsReceiveLoanModalOpen(false);
-      setReceiveAmount("");
-      setReceiveNotes("");
-      setReceiveCustomName("");
-    } else {
-      alert(res.error || "ব্যর্থ হয়েছে");
-    }
-  };
-
-  const filteredProfiles = initialProfiles.filter((p) => {
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.phone.includes(searchTerm);
-
-    const matchesFilter =
-      filterType === "all" ||
-      (filterType === "client" && p.personType === "CLIENT") ||
-      (filterType === "employee" && p.personType === "EMPLOYEE") ||
-      (filterType === "other" && p.personType === "OTHER");
-
-    return matchesSearch && matchesFilter;
   });
 
+  // Filter invoices
+  const filteredInvoices = initialInvoices.filter((inv) => {
+    const due = inv.totalAmount - inv.paidAmount;
+    if (due <= 0) return false;
+
+    // Search filter
+    const clientName = inv.client?.name?.toLowerCase() || "";
+    const clientPhone = inv.client?.phone || "";
+    const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || clientPhone.includes(searchTerm);
+    if (!matchesSearch) return false;
+
+    // Tab filter
+    if (filterTab === "product_in") return inv.type === "product_in";
+    if (filterTab === "product_out") return inv.type === "product_out";
+    if (filterTab === "overdue") {
+      return inv.dueDate && new Date(inv.dueDate) < now;
+    }
+
+    return true;
+  });
+
+  const handleOpenSettleModal = (inv: any) => {
+    const due = inv.totalAmount - inv.paidAmount;
+    setSelectedInvoiceToSettle(inv);
+    setSettleAmount(due.toString());
+    setSettleModalOpen(true);
+  };
+
+  const handleSettleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvoiceToSettle || !settleAmount || Number(settleAmount) <= 0) return;
+
+    setLoading(true);
+    const res = await settleInvoiceDue({
+      invoiceId: selectedInvoiceToSettle.id,
+      amount: Number(settleAmount),
+      requestedBy: "owner",
+    });
+
+    setLoading(false);
+    if (res.success) {
+      setSettleModalOpen(false);
+      setSelectedInvoiceToSettle(null);
+      setSettleAmount("");
+      router.refresh();
+    } else {
+      alert(res.error);
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6 relative">
-      {/* Top Header */}
+    <div className="max-w-6xl mx-auto space-y-6 pt-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
-            <Landmark size={26} />
+          <div className="p-2.5 bg-amber-100 text-amber-700 rounded-xl">
+            <CalendarClock size={28} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              Loans & Advances <span className="text-lg font-normal text-gray-500">(লোন ও ধার)</span>
+            <h1 className="text-2xl font-bold text-gray-900">
+              বকেয়ার হিসাব <span className="text-lg font-normal text-gray-500">(Business Due Management)</span>
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              ব্যবসায়িক গ্রাহক, কর্মচারী ও পরিচিতদের সাথে ধার ও ঋণ লেনদেনের পূর্ণ হিসাব
+              ব্যবসার কার কার কাছে কত টাকা বাকি আছে এবং পরিশোধের প্রতিশ্রুত তারিখের তালিকা।
             </p>
           </div>
-        </div>
-
-        <div className="flex space-x-3">
-          <button
-            onClick={() => {
-              setGiveType("GIVE");
-              setIsGiveLoanModalOpen(true);
-            }}
-            className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm text-sm"
-          >
-            <ArrowUpFromLine size={18} />
-            <span>Give Loan (ধার দিন)</span>
-          </button>
-          <button
-            onClick={() => {
-              setReceiveDirection("RECEIVE_BACK");
-              setIsReceiveLoanModalOpen(true);
-            }}
-            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm text-sm"
-          >
-            <ArrowDownToLine size={18} />
-            <span>Receive Payment (ফেরত নিন)</span>
-          </button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 shadow-md text-white">
-          <p className="text-orange-100 font-medium mb-1">
-            Total Loan Given (আমি মোট টাকা পাবো)
-          </p>
-          <h2 className="text-4xl font-bold">৳ {totalGiven.toLocaleString()}</h2>
-          <p className="text-xs mt-2 text-orange-200">
-            গ্রাহক, মহাজন বা কর্মচারীদের প্রদানকৃত মোট ধারের বাকি
-          </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-6 shadow-md text-white flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="text-red-100 font-bold">মহাজনদের বকেয়া দেনা</p>
+              <ArrowUpFromLine size={20} className="text-red-200" />
+            </div>
+            <p className="text-[10px] text-red-200 uppercase mt-0.5">(Total Due to Suppliers - Payables)</p>
+          </div>
+          <div className="mt-4">
+            <h2 className="text-3xl font-bold">৳ {totalSupplierDue.toLocaleString()}</h2>
+            <p className="text-xs text-red-200 mt-1">পণ্য ক্রয়ের কারণে মহাজনদের বাকি দিতে হবে</p>
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex flex-col justify-center">
-          <p className="font-medium text-gray-500 mb-1">
-            Total Loan Taken (আমাকে মোট দিতে হবে)
-          </p>
-          <h2 className="text-3xl font-bold text-red-600">
-            ৳ {totalTaken.toLocaleString()}
-          </h2>
-          <p className="text-xs mt-2 text-gray-400">
-            অন্যের কাছ থেকে ধার বা ঋণ নেওয়া মোট ব্যালেন্স
-          </p>
+        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-6 shadow-md text-white flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="text-emerald-100 font-bold">কাস্টমারদের বকেয়া পাওনা</p>
+              <ArrowDownToLine size={20} className="text-emerald-200" />
+            </div>
+            <p className="text-[10px] text-emerald-200 uppercase mt-0.5">(Total Due from Customers - Receivables)</p>
+          </div>
+          <div className="mt-4">
+            <h2 className="text-3xl font-bold">৳ {totalCustomerDue.toLocaleString()}</h2>
+            <p className="text-xs text-emerald-200 mt-1">পণ্য বিক্রির কারণে কাস্টমাররা জমা দেবে</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-gray-800">তারিখ পার হওয়া বকেয়া</p>
+              <AlertCircle size={20} className="text-amber-500" />
+            </div>
+            <p className="text-[10px] text-gray-400 uppercase mt-0.5">(Overdue Invoices)</p>
+          </div>
+          <div className="mt-4">
+            <h2 className="text-3xl font-bold text-amber-600">{overdueCount} টি চালান</h2>
+            <p className="text-xs text-gray-500 mt-1">প্রতিশ্রুত তারিখ পেরিয়ে গেছে</p>
+          </div>
         </div>
       </div>
 
-      {/* Loan Profile Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-50/70">
-          <div className="relative w-full max-w-md">
-            <input
-              type="text"
-              placeholder="নাম বা ফোন দিয়ে খুঁজুন..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm bg-white"
-            />
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-          </div>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="p-2 border border-gray-300 rounded-lg outline-none text-sm bg-white font-medium text-gray-700"
+      {/* Tabs & Search */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <button
+            onClick={() => setFilterTab("all")}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+              filterTab === "all"
+                ? "bg-amber-600 text-white shadow-sm"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
           >
-            <option value="all">সব প্রোফাইল (All Profiles)</option>
-            <option value="client">গ্রাহক ও মহাজন (Clients)</option>
-            <option value="employee">কর্মচারী (Employees)</option>
-            <option value="other">অন্যান্য (Others)</option>
-          </select>
+            সব বকেয়া ({initialInvoices.filter(i => i.totalAmount > i.paidAmount).length})
+          </button>
+          <button
+            onClick={() => setFilterTab("product_in")}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+              filterTab === "product_in"
+                ? "bg-red-600 text-white shadow-sm"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            মহাজনের বাকি দেনা (ক্রয়)
+          </button>
+          <button
+            onClick={() => setFilterTab("product_out")}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+              filterTab === "product_out"
+                ? "bg-emerald-600 text-white shadow-sm"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            কাস্টমারের বাকি পাওনা (বিক্রি)
+          </button>
+          <button
+            onClick={() => setFilterTab("overdue")}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+              filterTab === "overdue"
+                ? "bg-amber-700 text-white shadow-sm"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            তারিখ পার হয়েছে ({overdueCount})
+          </button>
         </div>
 
+        {/* Search */}
+        <div className="relative w-full md:w-72">
+          <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+          <input
+            type="text"
+            placeholder="পার্টির নাম বা ফোন দিয়ে খুঁজুন..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-amber-500 outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Due Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="p-4 font-bold text-gray-700">নাম (Name)</th>
-                <th className="p-4 font-bold text-gray-700">প্রোফাইল টাইপ</th>
-                <th className="p-4 font-bold text-gray-700">ফোন নম্বর</th>
-                <th className="p-4 font-bold text-gray-700">সর্বশেষ তারিখ</th>
-                <th className="p-4 font-bold text-right text-gray-700">
-                  বর্তমান হিসাব (Balance)
-                </th>
+                <th className="p-4 font-bold text-gray-700">পার্টি / মহাজন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Party Name)</span></th>
+                <th className="p-4 font-bold text-gray-700">চালানের ধরন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Type)</span></th>
+                <th className="p-4 font-bold text-gray-700">বাকি শুরুর তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Due Start Date)</span></th>
+                <th className="p-4 font-bold text-gray-700">পরিশোধের তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Promised Payment Date)</span></th>
+                <th className="p-4 font-bold text-gray-700 text-right">মোট বিল <span className="text-[10px] font-normal text-gray-400 block uppercase">(Total Bill)</span></th>
+                <th className="p-4 font-bold text-gray-700 text-right">জমা <span className="text-[10px] font-normal text-gray-400 block uppercase">(Paid)</span></th>
+                <th className="p-4 font-bold text-gray-700 text-right">বকেয়া টাকা <span className="text-[10px] font-normal text-gray-400 block uppercase">(Due Amount)</span></th>
+                <th className="p-4 font-bold text-gray-700 text-center">অ্যাকশন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Action)</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredProfiles.map((p, idx) => {
-                const isReceivable = p.netBalance >= 0;
+            <tbody className="divide-y divide-gray-50">
+              {filteredInvoices.map((inv) => {
+                const due = inv.totalAmount - inv.paidAmount;
+                const isOverdue = inv.dueDate && new Date(inv.dueDate) < now;
+                const isDueSoon = inv.dueDate && !isOverdue && new Date(inv.dueDate) <= threeDaysFromNow;
+
                 return (
-                  <tr key={idx} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="p-4 flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
-                        <User size={16} />
-                      </div>
-                      <span className="font-bold text-gray-900">{p.name}</span>
-                    </td>
+                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                    {/* Party */}
                     <td className="p-4">
-                      <span
-                        className={`px-2.5 py-1 rounded text-xs font-bold ${
-                          p.personType === "CLIENT"
-                            ? "bg-blue-100 text-blue-700"
-                            : p.personType === "EMPLOYEE"
-                            ? "bg-pink-100 text-pink-700"
-                            : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {p.personType}
-                      </span>
+                      <div className="font-bold text-gray-900">{inv.client?.name}</div>
+                      <div className="text-xs text-gray-500">{inv.client?.phone}</div>
                     </td>
-                    <td className="p-4 font-medium">{p.phone}</td>
-                    <td className="p-4 text-gray-500">
-                      {new Date(p.lastDate).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
-                    <td className="p-4 text-right">
-                      {isReceivable ? (
-                        <span className="font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded">
-                          আমি পাবো: ৳ {p.netBalance.toLocaleString()}
+
+                    {/* Invoice Type */}
+                    <td className="p-4">
+                      {inv.type === "product_in" ? (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-xs font-bold">
+                          মহাজনের পাওনা (ক্রয়)
                         </span>
                       ) : (
-                        <span className="font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded">
-                          দিতে হবে: ৳ {Math.abs(p.netBalance).toLocaleString()}
+                        <span className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-bold">
+                          কাস্টমারের দেনা (বিক্রি)
                         </span>
                       )}
+                    </td>
+
+                    {/* Start Date */}
+                    <td className="p-4 font-medium text-gray-700">
+                      {new Date(inv.date).toLocaleDateString()}
+                    </td>
+
+                    {/* Due / Promised Date */}
+                    <td className="p-4">
+                      {inv.dueDate ? (
+                        <div>
+                          <div className="font-bold text-gray-900 flex items-center space-x-1">
+                            <Clock size={14} className="text-gray-400" />
+                            <span>{new Date(inv.dueDate).toLocaleDateString()}</span>
+                          </div>
+                          {isOverdue && (
+                            <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-red-100 text-red-700 font-bold text-[10px] rounded">
+                              ⚠️ তারিখ পার হয়েছে
+                            </span>
+                          )}
+                          {isDueSoon && (
+                            <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-800 font-bold text-[10px] rounded">
+                              ⏰ আসন্ন পরিশোধ
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">তারিখ নির্ধারিত নেই</span>
+                      )}
+                    </td>
+
+                    {/* Total */}
+                    <td className="p-4 text-right font-medium text-gray-700">
+                      ৳ {inv.totalAmount.toLocaleString()}
+                    </td>
+
+                    {/* Paid */}
+                    <td className="p-4 text-right font-medium text-emerald-600">
+                      ৳ {inv.paidAmount.toLocaleString()}
+                    </td>
+
+                    {/* Due */}
+                    <td className="p-4 text-right">
+                      <span className="font-bold text-base text-red-600">
+                        ৳ {due.toLocaleString()}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        <button
+                          onClick={() => handleOpenSettleModal(inv)}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                        >
+                          {inv.type === "product_in" ? "পরিশোধ করুন" : "টাকা জমা নিন"}
+                        </button>
+                        <button
+                          onClick={() => setSelectedInvoiceForPrint(inv)}
+                          className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                          title="চালান প্রিন্ট"
+                        >
+                          <Printer size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
               })}
 
-              {filteredProfiles.length === 0 && (
+              {filteredInvoices.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-10 text-center text-gray-400">
-                    <Landmark size={36} className="mx-auto mb-2 text-gray-300" />
-                    <p className="font-semibold text-gray-600">কোনো লোন বা ধারের রেকর্ড পাওয়া যায়নি</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      উপরের বাটনে ক্লিক করে নতুন লোন যোগ করুন।
-                    </p>
+                  <td colSpan={8} className="p-12 text-center text-gray-400">
+                    <CheckCircle2 size={36} className="mx-auto mb-2 text-emerald-400 opacity-80" />
+                    <p className="font-bold text-gray-600">কোনো বকেয়া পাওয়া যায়নি!</p>
+                    <p className="text-xs text-gray-400 mt-1">সব বকেয়া পরিশোধিত অথবা সার্চের সাথে মেলেনি।</p>
                   </td>
                 </tr>
               )}
@@ -376,211 +359,64 @@ export default function LoanClient({
         </div>
       </div>
 
-      {/* Modal: Give / Take Loan */}
-      {isGiveLoanModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-gray-900/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-lg font-bold text-gray-800">
-                {giveType === "GIVE" ? "Give Loan / Advance (ধার দিন)" : "Take Loan (ধার নিন)"}
-              </h2>
+      {/* Settle Due Modal */}
+      {settleModalOpen && selectedInvoiceToSettle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+              <h3 className="font-bold text-gray-900">
+                {selectedInvoiceToSettle.type === "product_in" 
+                  ? "মহাজনকে বকেয়া পরিশোধ করুন" 
+                  : "কাস্টমারের কাছ থেকে বকেয়া আদায় করুন"}
+              </h3>
               <button
-                onClick={() => setIsGiveLoanModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg"
+                onClick={() => setSettleModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleGiveLoanSubmit}>
-              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-                <div className="flex space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setGiveType("GIVE")}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold border ${
-                      giveType === "GIVE"
-                        ? "bg-orange-600 text-white border-orange-600"
-                        : "bg-gray-50 text-gray-700 border-gray-300"
-                    }`}
-                  >
-                    ধার দিচ্ছি (Give Loan)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGiveType("TAKE")}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold border ${
-                      giveType === "TAKE"
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-gray-50 text-gray-700 border-gray-300"
-                    }`}
-                  >
-                    ধার নিচ্ছি (Take Loan)
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    কার সাথে লেনদেন? (Person Type)
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    {(["CLIENT", "EMPLOYEE", "OTHER"] as const).map((pt) => (
-                      <button
-                        key={pt}
-                        type="button"
-                        onClick={() => {
-                          setGivePersonType(pt);
-                          setSelectedPersonId("");
-                        }}
-                        className={`py-2 rounded-lg font-bold border text-center ${
-                          givePersonType === pt
-                            ? "bg-slate-800 text-white border-slate-800"
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                        }`}
-                      >
-                        {pt === "CLIENT" ? "গ্রাহক/মহাজন" : pt === "EMPLOYEE" ? "কর্মচারী" : "অন্যান্য"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {givePersonType === "CLIENT" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ক্লায়েন্ট / মহাজন নির্বাচন করুন
-                    </label>
-                    <select
-                      value={selectedPersonId}
-                      onChange={(e) => setSelectedPersonId(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm bg-white"
-                      required
-                    >
-                      <option value="">নির্বাচন করুন...</option>
-                      {clients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({c.type}) - {c.phone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {givePersonType === "EMPLOYEE" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      কর্মচারী নির্বাচন করুন
-                    </label>
-                    <select
-                      value={selectedPersonId}
-                      onChange={(e) => setSelectedPersonId(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm bg-white"
-                      required
-                    >
-                      <option value="">নির্বাচন করুন...</option>
-                      {employees.map((em) => (
-                        <option key={em.id} value={em.id}>
-                          {em.name} - {em.phone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {givePersonType === "OTHER" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        ব্যক্তির নাম <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Rahim Khan"
-                        value={customName}
-                        onChange={(e) => setCustomName(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        ফোন নম্বর
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="017XXXXXXXX"
-                        value={customPhone}
-                        onChange={(e) => setCustomPhone(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    টাকার পরিমাণ (Amount ৳) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="৳ 0.00"
-                    value={giveAmount}
-                    onChange={(e) => setGiveAmount(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none font-bold text-gray-900 text-lg"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">তারিখ</label>
-                    <input
-                      type="date"
-                      value={giveDate}
-                      onChange={(e) => setGiveDate(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">পেমেন্ট মাধ্যম</label>
-                    <select
-                      value={giveMethod}
-                      onChange={(e) => setGiveMethod(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm bg-white"
-                    >
-                      <option value="cash">Main Cash (ক্যাশবক্স)</option>
-                      <option value="bank">Bank / Mobile Banking</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">বিবরণ (Notes)</label>
-                  <textarea
-                    rows={2}
-                    placeholder="লোন দেওয়ার কারণ বা বিবরণ..."
-                    value={giveNotes}
-                    onChange={(e) => setGiveNotes(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm"
-                  ></textarea>
-                </div>
+            <form onSubmit={handleSettleSubmit} className="p-6 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs space-y-1 text-amber-900">
+                <p><span className="font-bold">পার্টি:</span> {selectedInvoiceToSettle.client?.name}</p>
+                <p><span className="font-bold">চালানের মোট টাকা:</span> ৳ {selectedInvoiceToSettle.totalAmount.toLocaleString()}</p>
+                <p><span className="font-bold">বর্তমান বকেয়া:</span> <span className="text-red-600 font-bold">৳ {(selectedInvoiceToSettle.totalAmount - selectedInvoiceToSettle.paidAmount).toLocaleString()}</span></p>
               </div>
 
-              <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  পরিশোধ / জমার পরিমাণ <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={settleAmount}
+                  onChange={(e) => setSettleAmount(e.target.value)}
+                  max={selectedInvoiceToSettle.totalAmount - selectedInvoiceToSettle.paidAmount}
+                  min={1}
+                  className="w-full p-3 border border-gray-300 rounded-lg text-lg font-bold text-gray-900 outline-none focus:ring-2 focus:ring-amber-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  টাকা পরিশোধ করলে মূল ক্যাশ ও পার্টির বাকি খাতা স্বয়ংক্রিয়ভাবে আপডেট হবে।
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsGiveLoanModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-white text-sm"
+                  onClick={() => setSettleModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-bold text-sm hover:bg-gray-50"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-sm"
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center space-x-1 shadow-sm"
                 >
                   <Save size={16} />
-                  <span>{loading ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ করুন"}</span>
+                  <span>{loading ? "Saving..." : "নিশ্চিত করুন"}</span>
                 </button>
               </div>
             </form>
@@ -588,178 +424,12 @@ export default function LoanClient({
         </div>
       )}
 
-      {/* Modal: Receive Loan Payment */}
-      {isReceiveLoanModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-gray-900/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-lg font-bold text-gray-800">
-                Receive Payment (ধারের টাকা ফেরত গ্রহণ)
-              </h2>
-              <button
-                onClick={() => setIsReceiveLoanModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleReceivePaymentSubmit}>
-              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    কার থেকে ফেরত পাচ্ছেন? (Profile Type)
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    {(["CLIENT", "EMPLOYEE", "OTHER"] as const).map((pt) => (
-                      <button
-                        key={pt}
-                        type="button"
-                        onClick={() => {
-                          setReceivePersonType(pt);
-                          setReceivePersonId("");
-                        }}
-                        className={`py-2 rounded-lg font-bold border text-center ${
-                          receivePersonType === pt
-                            ? "bg-slate-800 text-white border-slate-800"
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                        }`}
-                      >
-                        {pt === "CLIENT" ? "গ্রাহক/মহাজন" : pt === "EMPLOYEE" ? "কর্মচারী" : "অন্যান্য"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {receivePersonType === "CLIENT" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      গ্রাহক / মহাজন নির্বাচন করুন
-                    </label>
-                    <select
-                      value={receivePersonId}
-                      onChange={(e) => setReceivePersonId(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm bg-white"
-                      required
-                    >
-                      <option value="">নির্বাচন করুন...</option>
-                      {clients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({c.type}) - {c.phone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {receivePersonType === "EMPLOYEE" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      কর্মচারী নির্বাচন করুন
-                    </label>
-                    <select
-                      value={receivePersonId}
-                      onChange={(e) => setReceivePersonId(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm bg-white"
-                      required
-                    >
-                      <option value="">নির্বাচন করুন...</option>
-                      {employees.map((em) => (
-                        <option key={em.id} value={em.id}>
-                          {em.name} - {em.phone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {receivePersonType === "OTHER" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ব্যক্তির নাম <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Rahim Khan"
-                      value={receiveCustomName}
-                      onChange={(e) => setReceiveCustomName(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm"
-                      required
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    ফেরত পাওয়া টাকার পরিমাণ (৳) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="৳ 0.00"
-                    value={receiveAmount}
-                    onChange={(e) => setReceiveAmount(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-gray-900 text-lg"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">তারিখ</label>
-                    <input
-                      type="date"
-                      value={receiveDate}
-                      onChange={(e) => setReceiveDate(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">কোথায় জমা হলো</label>
-                    <select
-                      value={receiveMethod}
-                      onChange={(e) => setReceiveMethod(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm bg-white"
-                    >
-                      <option value="cash">Main Cash (ক্যাশবক্স)</option>
-                      <option value="bank">Bank / Mobile Banking</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">বিবরণ (Notes)</label>
-                  <textarea
-                    rows={2}
-                    placeholder="বিবরণ..."
-                    value={receiveNotes}
-                    onChange={(e) => setReceiveNotes(e.target.value)}
-                    className="w-full p-2.5 border border-gray-300 rounded-lg outline-none text-sm"
-                  ></textarea>
-                </div>
-              </div>
-
-              <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setIsReceiveLoanModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-white text-sm"
-                >
-                  বাতিল
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-sm"
-                >
-                  <Save size={16} />
-                  <span>{loading ? "সংরক্ষণ হচ্ছে..." : "জমা সংরক্ষণ"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Invoice Print Modal */}
+      <PrintableInvoiceModal
+        isOpen={Boolean(selectedInvoiceForPrint)}
+        invoice={selectedInvoiceForPrint}
+        onClose={() => setSelectedInvoiceForPrint(null)}
+      />
     </div>
   );
 }
