@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import CashActionButtons from "./CashActionButtons";
 
+export const dynamic = "force-dynamic";
+
 export default async function MainCash() {
   const session = await auth();
   if (!session) {

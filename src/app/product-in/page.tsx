@@ -3,6 +3,8 @@ import { getClients } from "@/actions/clientActions";
 import ProductInClient from "./ProductInClient";
 import { auth } from "@/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProductInPage() {
   const session = await auth();
   const mockRole = session?.user?.name || "owner";
