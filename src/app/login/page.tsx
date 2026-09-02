@@ -39,9 +39,30 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemo = (user: string, pass: string) => {
+  const handleQuickDemo = async (user: string, pass: string) => {
     setUsername(user);
     setPassword(pass);
+    setErrorMsg("");
+    setLoading(true);
+
+    try {
+      const res = await signIn("credentials", {
+        username: user,
+        password: pass,
+        redirect: false,
+      });
+
+      if (res?.error) {
+        setErrorMsg("ভুল ইউজারনেম বা পাসওয়ার্ড! আবার চেষ্টা করুন।");
+      } else {
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err: any) {
+      setErrorMsg("লগইন করতে সমস্যা হচ্ছে।");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -131,7 +152,7 @@ export default function LoginPage() {
                 className="p-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 text-center transition-colors"
               >
                 👑 ওনার (Owner)
-                <span className="block text-[10px] text-gray-500 font-normal">user: owner / 123</span>
+                <span className="block text-[10px] text-gray-500 font-normal">pass: 123 বা 1234</span>
               </button>
               <button
                 type="button"
@@ -139,7 +160,7 @@ export default function LoginPage() {
                 className="p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-bold text-blue-800 text-center transition-colors"
               >
                 👷 ম্যানেজার (Manager)
-                <span className="block text-[10px] text-gray-500 font-normal">user: manager / 123</span>
+                <span className="block text-[10px] text-gray-500 font-normal">pass: 123 বা 1234</span>
               </button>
             </div>
           </div>
