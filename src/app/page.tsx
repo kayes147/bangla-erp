@@ -11,68 +11,88 @@ export default async function Home() {
 
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  // 1. Calculate Main Cash
-  const allTransactions = await prisma.transaction.findMany();
-  const mainCash = allTransactions.reduce((acc, t) => {
-    return t.type === 'in' ? acc + t.amount : acc - t.amount;
-  }, 0);
+  let allTransactions: any[] = [];
+  let mainCash = 0;
+  let dailyExpenseTotal = 0;
+  let salesTotal = 0;
+  let salesReceived = 0;
+  let salesDue = 0;
+  let salesProductCount = 0;
+  let purchasesTotal = 0;
+  let purchasesPaid = 0;
+  let purchasesDue = 0;
+  let purchasesProductCount = 0;
+  let totalDueReceivable = 0;
+  let monthlyProfit = 0;
+  let lowStockProducts: any[] = [];
+  let totalPending = 0;
 
-  // 2. Calculate Today's Expenses
-  const todaysExpenses = await prisma.expense.findMany({
-    where: { date: { gte: today } }
-  });
-  const dailyExpenseTotal = todaysExpenses.reduce((sum, e) => sum + e.amount, 0);
+  try {
+    // 1. Calculate Main Cash
+    allTransactions = await prisma.transaction.findMany();
+    mainCash = allTransactions.reduce((acc, t) => {
+      return t.type === 'in' ? acc + t.amount : acc - t.amount;
+    }, 0);
 
-  // 3. Today's Product Out (Sales)
-  const todaysSales = await prisma.invoice.findMany({
-    where: { type: 'product_out', date: { gte: today } },
-    include: { items: true }
-  });
-  const salesTotal = todaysSales.reduce((sum, s) => sum + s.totalAmount, 0);
-  const salesReceived = todaysSales.reduce((sum, s) => sum + s.paidAmount, 0);
-  const salesDue = salesTotal - salesReceived;
-  const salesProductCount = todaysSales.reduce((sum, s) => sum + s.items.reduce((q, item) => q + item.quantity, 0), 0);
+    // 2. Calculate Today's Expenses
+    const todaysExpenses = await prisma.expense.findMany({
+      where: { date: { gte: today } }
+    });
+    dailyExpenseTotal = todaysExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  // 4. Today's Product In (Purchases)
-  const todaysPurchases = await prisma.invoice.findMany({
-    where: { type: 'product_in', date: { gte: today } },
-    include: { items: true }
-  });
-  const purchasesTotal = todaysPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
-  const purchasesPaid = todaysPurchases.reduce((sum, p) => sum + p.paidAmount, 0);
-  const purchasesDue = purchasesTotal - purchasesPaid;
-  const purchasesProductCount = todaysPurchases.reduce((sum, p) => sum + p.items.reduce((q, item) => q + item.quantity, 0), 0);
+    // 3. Today's Product Out (Sales)
+    const todaysSales = await prisma.invoice.findMany({
+      where: { type: 'product_out', date: { gte: today } },
+      include: { items: true }
+    });
+    salesTotal = todaysSales.reduce((sum, s) => sum + s.totalAmount, 0);
+    salesReceived = todaysSales.reduce((sum, s) => sum + s.paidAmount, 0);
+    salesDue = salesTotal - salesReceived;
+    salesProductCount = todaysSales.reduce((sum, s) => sum + s.items.reduce((q, item) => q + item.quantity, 0), 0);
 
-  // 5. Total Loan/Due (Receivable/Payable)
-  const clients = await prisma.client.findMany();
-  const totalDueReceivable = clients.reduce((sum, c) => c.openingBalance > 0 ? sum + c.openingBalance : sum, 0);
+    // 4. Today's Product In (Purchases)
+    const todaysPurchases = await prisma.invoice.findMany({
+      where: { type: 'product_in', date: { gte: today } },
+      include: { items: true }
+    });
+    purchasesTotal = todaysPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
+    purchasesPaid = todaysPurchases.reduce((sum, p) => sum + p.paidAmount, 0);
+    purchasesDue = purchasesTotal - purchasesPaid;
+    purchasesProductCount = todaysPurchases.reduce((sum, p) => sum + p.items.reduce((q, item) => q + item.quantity, 0), 0);
 
-  // 6. Monthly Profit (Very basic: Sales - Purchases - Expenses this month)
-  const monthlySales = await prisma.invoice.findMany({
-    where: { type: 'product_out', date: { gte: startOfMonth } }
-  });
-  const monthlyPurchases = await prisma.invoice.findMany({
-    where: { type: 'product_in', date: { gte: startOfMonth } }
-  });
-  const monthlyExpenses = await prisma.expense.findMany({
-    where: { date: { gte: startOfMonth } }
-  });
-  
-  const mSalesTotal = monthlySales.reduce((sum, s) => sum + s.totalAmount, 0);
-  const mPurchasesTotal = monthlyPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
-  const mExpensesTotal = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
-  
-  const monthlyProfit = mSalesTotal - mPurchasesTotal - mExpensesTotal;
+    // 5. Total Loan/Due (Receivable/Payable)
+    const clients = await prisma.client.findMany();
+    totalDueReceivable = clients.reduce((sum, c) => c.openingBalance > 0 ? sum + c.openingBalance : sum, 0);
 
-  // 7. Low Stock Products
-  const lowStockProducts = await prisma.product.findMany({
-    where: { stock: { lt: 10 } },
-    take: 5
-  });
+    // 6. Monthly Profit
+    const monthlySales = await prisma.invoice.findMany({
+      where: { type: 'product_out', date: { gte: startOfMonth } }
+    });
+    const monthlyPurchases = await prisma.invoice.findMany({
+      where: { type: 'product_in', date: { gte: startOfMonth } }
+    });
+    const monthlyExpenses = await prisma.expense.findMany({
+      where: { date: { gte: startOfMonth } }
+    });
+    
+    const mSalesTotal = monthlySales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const mPurchasesTotal = monthlyPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
+    const mExpensesTotal = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
+    
+    monthlyProfit = mSalesTotal - mPurchasesTotal - mExpensesTotal;
 
-  // 8. Approvals
-  const { invoices: pendingInvoices, expenses: pendingExpenses, transactions: pendingTransactions } = await getPendingApprovals();
-  const totalPending = (pendingInvoices?.length || 0) + (pendingExpenses?.length || 0) + (pendingTransactions?.length || 0);
+    // 7. Low Stock Products
+    lowStockProducts = await prisma.product.findMany({
+      where: { stock: { lt: 10 } },
+      take: 5
+    });
+
+    // 8. Approvals
+    const pending = await getPendingApprovals();
+    totalPending = (pending.invoices?.length || 0) + (pending.expenses?.length || 0) + (pending.transactions?.length || 0);
+  } catch (err) {
+    console.error("Dashboard data fetch error:", err);
+  }
 
   return (
     <div className="space-y-6">
