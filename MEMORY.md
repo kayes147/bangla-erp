@@ -7,8 +7,8 @@
 
 **Tech Stack:**
 - **Frontend:** Next.js (App Router), React, Tailwind CSS, Lucide Icons
-- **Backend/DB:** Prisma ORM, SQLite (local `dev.db` pushed to Vercel via `/tmp` workaround)
-- **Deployment:** Vercel
+- **Backend/DB:** Prisma ORM, Supabase PostgreSQL (Cloud Database via Connection Pooling)
+- **Deployment:** Vercel (Auto-deploy from GitHub master)
 
 ---
 
