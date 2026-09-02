@@ -9,13 +9,13 @@ export async function addExpense(data: {
   amount: number;
   description: string;
   isPersonal: boolean;
-  paymentMethod?: string; // "business_cash" or "other_source"
+  paymentMethod?: string; // "cash", "mobile_banking", "bank", or "other_source"
   requestedBy: string; // the username (e.g., 'manager' or 'owner')
 }) {
   try {
     const isOwner = data.requestedBy === "owner";
     const status = (data.isPersonal && !isOwner) ? "PENDING" : "APPROVED";
-    const paymentMethod = data.paymentMethod || (data.isPersonal ? "business_cash" : "cash");
+    const paymentMethod = data.paymentMethod || "cash";
 
     const expense = await prisma.expense.create({
       data: {
@@ -34,18 +34,23 @@ export async function addExpense(data: {
       },
     });
 
-    // If it's APPROVED immediately, check whether to create Main Cash Transaction
+    // If it's APPROVED immediately:
+    // User requirement: Main cash must calculate all business expenses regardless of payment method.
     if (status === "APPROVED") {
-      // Deduct from Main Cash only if it's a business expense OR personal expense from business cash
-      const shouldDeductMainCash = !data.isPersonal || paymentMethod === "business_cash";
+      const isOtherPersonalSource = data.isPersonal && paymentMethod === "other_source";
 
-      if (shouldDeductMainCash) {
+      // Deduct from Main Cash for ALL business expenses, and personal expenses from business cash
+      if (!isOtherPersonalSource) {
+        let methodText = "নগদ";
+        if (paymentMethod === "mobile_banking") methodText = "মোবাইল ব্যাংকিং";
+        else if (paymentMethod === "bank") methodText = "ব্যাংক";
+
         try {
           await prisma.transaction.create({
             data: {
               type: "out",
               amount: Number(data.amount),
-              description: `[খরচ${data.isPersonal ? " (ব্যক্তিগত)" : ""}] ${data.category}: ${data.description}`,
+              description: `[খরচ${data.isPersonal ? " (ব্যক্তিগত)" : ""} - ${methodText}] ${data.category}: ${data.description}`,
               status: "APPROVED",
               requestedBy: data.requestedBy,
               expense: { connect: { id: expense.id } },
@@ -69,7 +74,7 @@ export async function addExpense(data: {
       await recordAuditLog(
         data.requestedBy,
         "ADD_EXPENSE",
-        `Added ${data.isPersonal ? "Personal" : "Business"} expense of ৳${Number(data.amount).toLocaleString()} in '${data.category}' (${status}, Source: ${paymentMethod === "other_source" ? "ব্যক্তিগত/অন্যান্য তহবিল" : "ব্যবসার ক্যাশ"})`
+        `Added ${data.isPersonal ? "Personal" : "Business"} expense of ৳${Number(data.amount).toLocaleString()} in '${data.category}' (${status}, Method: ${paymentMethod})`
       );
     } catch (e) {
       console.warn("Audit log recording warning:", e);

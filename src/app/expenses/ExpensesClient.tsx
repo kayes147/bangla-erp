@@ -17,6 +17,7 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [sourceOfFund, setSourceOfFund] = useState<"business_cash" | "other_source">("business_cash");
 
   const handleAddExpense = async (e: React.FormEvent) => {
@@ -25,13 +26,16 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
     
     setLoading(true);
     const finalCategory = isPersonalExpense ? "Owner Personal" : category;
+    const finalMethod = isPersonalExpense 
+      ? (sourceOfFund === "other_source" ? "other_source" : paymentMethod)
+      : paymentMethod;
     
     const res = await addExpense({
       category: finalCategory || "Other",
       amount: Number(amount),
       description,
       isPersonal: isPersonalExpense,
-      paymentMethod: isPersonalExpense ? sourceOfFund : "business_cash",
+      paymentMethod: finalMethod,
       requestedBy: mockRole,
     });
     
@@ -41,6 +45,7 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
       setCategory("");
       setAmount("");
       setDescription("");
+      setPaymentMethod("cash");
       setIsPersonalExpense(false);
       setSourceOfFund("business_cash");
       router.refresh();
@@ -198,7 +203,26 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
               {activeTab === "business" && businessExpenses.map(e => (
                   <tr key={e.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4 text-gray-500 font-medium">{new Date(e.date).toLocaleDateString()}</td>
-                    <td className="p-4"><span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-bold">{e.category}</span></td>
+                    <td className="p-4">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs font-bold">
+                          {e.category === "Daily Labor" ? "দিনমজুর" : e.category === "Salary" ? "বেতন" : e.category}
+                        </span>
+                        {e.paymentMethod === "mobile_banking" ? (
+                          <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold">
+                            📱 বিকাশ/নগদ
+                          </span>
+                        ) : e.paymentMethod === "bank" ? (
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold">
+                            🏦 ব্যাংক
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold">
+                            💵 নগদ
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-4 font-medium text-gray-800">{e.description}</td>
                     <td className="p-4 font-bold text-red-600 text-right">৳ {e.amount.toLocaleString()}</td>
                     <td className="p-4 text-center">
@@ -363,6 +387,8 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                         required
                       >
                         <option value="" className="text-gray-500">নির্বাচন করুন (Select)</option>
+                        <option value="Daily Labor" className="text-gray-900">👷 দিনমজুর (Daily Labor / Din Mojor)</option>
+                        <option value="Salary" className="text-gray-900">💼 বেতন (Salary / Employee Salary)</option>
                         <option value="Tea & Snacks" className="text-gray-900">চা-নাস্তা (Tea & Snacks)</option>
                         <option value="Transport" className="text-gray-900">যাতায়াত (Transport)</option>
                         <option value="Utility Bills" className="text-gray-900">বিদ্যুৎ/গ্যাস (Utility Bills)</option>
@@ -383,6 +409,68 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                       className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-gray-900 bg-white placeholder-gray-400" 
                       required 
                     />
+                  </div>
+
+                  {/* Payment Method */}
+                  <div className={`sm:col-span-2 ${isPersonalExpense && sourceOfFund === "other_source" ? "hidden" : "block"}`}>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                      টাকা পরিশোধের মাধ্যম <span className="text-[10px] font-normal text-gray-400 uppercase">(Payment Method)</span> <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <label 
+                        onClick={() => setPaymentMethod("cash")}
+                        className={`flex items-center space-x-2 p-2.5 border rounded-lg cursor-pointer transition-all ${
+                          paymentMethod === "cash" 
+                            ? "border-emerald-500 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-300 font-bold" 
+                            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="payment_method"
+                          checked={paymentMethod === "cash"}
+                          onChange={() => setPaymentMethod("cash")}
+                          className="text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-xs">💵 নগদ ক্যাশ</span>
+                      </label>
+
+                      <label 
+                        onClick={() => setPaymentMethod("mobile_banking")}
+                        className={`flex items-center space-x-2 p-2.5 border rounded-lg cursor-pointer transition-all ${
+                          paymentMethod === "mobile_banking" 
+                            ? "border-purple-500 bg-purple-50 text-purple-950 ring-1 ring-purple-300 font-bold" 
+                            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="payment_method"
+                          checked={paymentMethod === "mobile_banking"}
+                          onChange={() => setPaymentMethod("mobile_banking")}
+                          className="text-purple-600 focus:ring-purple-500"
+                        />
+                        <span className="text-xs">📱 মোবাইল ব্যাংকিং</span>
+                      </label>
+
+                      <label 
+                        onClick={() => setPaymentMethod("bank")}
+                        className={`flex items-center space-x-2 p-2.5 border rounded-lg cursor-pointer transition-all ${
+                          paymentMethod === "bank" 
+                            ? "border-blue-500 bg-blue-50 text-blue-950 ring-1 ring-blue-300 font-bold" 
+                            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="payment_method"
+                          checked={paymentMethod === "bank"}
+                          onChange={() => setPaymentMethod("bank")}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-xs">🏦 সরাসরি ব্যাংক</span>
+                      </label>
+                    </div>
                   </div>
 
                   {/* Description */}
