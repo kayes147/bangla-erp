@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { Lock, User, Building2, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
+import { registerUser } from "@/actions/authActions";
+
 export default function Register() {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -16,12 +18,22 @@ export default function Register() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: Connect to backend registration API
-    setTimeout(() => {
-      setLoading(false);
-      alert("Registration successful! (Demo only)");
+    
+    const res = await registerUser({
+      name,
+      username,
+      companyName,
+      password,
+      role: "OWNER",
+    });
+
+    setLoading(false);
+    if (res.success) {
+      alert("অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে! এখন লগইন করুন।");
       router.push("/login");
-    }, 1000);
+    } else {
+      alert(res.error || "রেজিস্ট্রেশন ব্যর্থ হয়েছে");
+    }
   };
 
   return (

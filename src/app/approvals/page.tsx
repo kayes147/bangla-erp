@@ -1,7 +1,10 @@
 import { getPendingApprovals } from "@/actions/approvalActions";
+import { getCorrectionRequests } from "@/actions/correctionActions";
 import ApprovalsClient from "./ApprovalsClient";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 export default async function ApprovalsPage() {
   const session = await auth();
@@ -10,13 +13,17 @@ export default async function ApprovalsPage() {
     redirect("/"); // Only OWNER can access approvals
   }
 
-  const { success, invoices, expenses, transactions } = await getPendingApprovals();
+  const [{ invoices, expenses, transactions }, { requests: corrections }] = await Promise.all([
+    getPendingApprovals(),
+    getCorrectionRequests(),
+  ]);
 
   return (
     <ApprovalsClient 
       invoices={invoices || []} 
       expenses={expenses || []} 
       transactions={transactions || []} 
+      corrections={corrections || []}
     />
   );
 }

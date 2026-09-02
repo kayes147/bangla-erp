@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { recordAuditLog } from "./auditLogActions";
 
 export async function addExpense(data: {
   category: string;
@@ -51,6 +52,12 @@ export async function addExpense(data: {
     revalidatePath("/main-cash");
     revalidatePath("/");
     
+    await recordAuditLog(
+      data.requestedBy,
+      "ADD_EXPENSE",
+      `Added ${data.isPersonal ? "Personal" : "Business"} expense of ৳${data.amount.toLocaleString()} in '${data.category}' (${status})`
+    );
+
     return { success: true, expense };
   } catch (error) {
     console.error("Error adding expense:", error);

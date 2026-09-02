@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { recordAuditLog } from "./auditLogActions";
 
 export async function addTransaction(data: {
   type: "in" | "out";
@@ -37,6 +38,13 @@ export async function addTransaction(data: {
 
     revalidatePath("/main-cash");
     revalidatePath("/");
+
+    await recordAuditLog(
+      data.requestedBy || "owner",
+      "ADD_TRANSACTION",
+      `Added Cash ${data.type === "in" ? "In" : "Out"} of ৳${data.amount.toLocaleString()} - "${data.description}"`
+    );
+
     return { success: true, transaction };
   } catch (error) {
     console.error("Error adding transaction:", error);

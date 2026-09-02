@@ -9,7 +9,7 @@ const globalForPrisma = globalThis as unknown as {
 let dbPath = path.join(process.cwd(), 'prisma', 'dev.db');
 
 // Vercel Serverless read-only filesystem workaround for SQLite
-if (process.env.NODE_ENV === 'production') {
+if (process.env.VERCEL) {
   const tmpDbPath = '/tmp/dev.db';
   if (!fs.existsSync(tmpDbPath)) {
     try {

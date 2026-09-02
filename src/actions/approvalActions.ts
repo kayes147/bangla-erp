@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { recordAuditLog } from "./auditLogActions";
 
 export async function getPendingApprovals() {
   try {
@@ -117,6 +118,8 @@ export async function approveInvoice(id: string) {
     revalidatePath("/main-cash");
     revalidatePath("/clients");
     
+    await recordAuditLog("owner", "APPROVE_INVOICE", `Approved ${invoice.type === "product_in" ? "Product In" : "Product Out"} Invoice #${id.substring(0, 8)} for ৳${invoice.totalAmount.toLocaleString()}`);
+
     return { success: true };
   } catch (error: any) {
     console.error("Error approving invoice:", error);
@@ -131,6 +134,7 @@ export async function rejectInvoice(id: string) {
       data: { status: "REJECTED" }
     });
     revalidatePath("/approvals");
+    await recordAuditLog("owner", "REJECT_INVOICE", `Rejected Invoice #${id.substring(0, 8)}`);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -161,6 +165,7 @@ export async function approveExpense(id: string) {
           amount: expense.amount,
           description: expense.description,
           status: "APPROVED",
+
           expense: { connect: { id: expense.id } },
           requestedBy: expense.requestedBy
         }
@@ -170,6 +175,9 @@ export async function approveExpense(id: string) {
     revalidatePath("/approvals");
     revalidatePath("/expenses");
     revalidatePath("/main-cash");
+    
+    await recordAuditLog("owner", "APPROVE_EXPENSE", `Approved expense of ৳${expense.amount.toLocaleString()} (${expense.description})`);
+
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -183,6 +191,7 @@ export async function rejectExpense(id: string) {
       data: { status: "REJECTED" }
     });
     revalidatePath("/approvals");
+    await recordAuditLog("owner", "REJECT_EXPENSE", `Rejected expense #${id.substring(0, 8)}`);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -191,12 +200,13 @@ export async function rejectExpense(id: string) {
 
 export async function approveTransaction(id: string) {
   try {
-    await prisma.transaction.update({
+    const tx = await prisma.transaction.update({
       where: { id },
       data: { status: "APPROVED" }
     });
     revalidatePath("/approvals");
     revalidatePath("/main-cash");
+    await recordAuditLog("owner", "APPROVE_TRANSACTION", `Approved cash ${tx.type === "in" ? "In" : "Out"} of ৳${tx.amount.toLocaleString()} (${tx.description})`);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -210,6 +220,7 @@ export async function rejectTransaction(id: string) {
       data: { status: "REJECTED" }
     });
     revalidatePath("/approvals");
+    await recordAuditLog("owner", "REJECT_TRANSACTION", `Rejected transaction #${id.substring(0, 8)}`);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

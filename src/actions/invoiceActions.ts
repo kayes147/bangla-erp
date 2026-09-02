@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { recordAuditLog } from "./auditLogActions";
 
 export async function createInvoice(data: {
   type: "product_in" | "product_out";
@@ -123,6 +124,13 @@ export async function createInvoice(data: {
     revalidatePath("/main-cash");
     revalidatePath("/clients");
     
+    // Record audit log
+    await recordAuditLog(
+      data.requestedBy || "manager",
+      data.type === "product_in" ? "CREATE_INVOICE_IN" : "CREATE_INVOICE_OUT",
+      `Created ${data.type === "product_in" ? "Product In" : "Product Out"} Invoice #${result.id.slice(0, 8)} for ৳${result.totalAmount.toLocaleString()} (${data.status})`
+    );
+
     return { success: true, invoice: result };
   } catch (error: any) {
     console.error("Error creating invoice:", error);

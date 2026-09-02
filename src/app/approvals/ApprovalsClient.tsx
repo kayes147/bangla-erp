@@ -1,21 +1,36 @@
 "use client";
 import { useState } from "react";
-import { CheckCircle2, XCircle, Clock, Package, Receipt, Wallet, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Package, Receipt, Wallet, Loader2, AlertTriangle, FileEdit } from "lucide-react";
 import { approveInvoice, rejectInvoice, approveExpense, rejectExpense, approveTransaction, rejectTransaction } from "@/actions/approvalActions";
+import { handleCorrectionDecision } from "@/actions/correctionActions";
+
+interface CorrectionItem {
+  id: string;
+  requesterId: string;
+  responderId: string;
+  targetType: string;
+  targetId: string;
+  details: string;
+  status: string;
+  createdAt: Date | string;
+}
 
 export default function ApprovalsClient({ 
   invoices, 
   expenses, 
-  transactions 
+  transactions,
+  corrections = []
 }: { 
   invoices: any[], 
   expenses: any[], 
-  transactions: any[] 
+  transactions: any[],
+  corrections?: CorrectionItem[]
 }) {
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "corrections">("pending");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const totalPending = invoices.length + expenses.length + transactions.length;
+  const pendingCorrections = corrections.filter(c => c.status === "PENDING");
 
   const handleApprove = async (id: string, type: 'invoice' | 'expense' | 'transaction') => {
     setProcessingId(id);
@@ -41,19 +56,40 @@ export default function ApprovalsClient({
     if (!res.success) alert("Error: " + res.error);
   };
 
+  const handleCorrectionAction = async (id: string, decision: "APPROVED" | "REJECTED") => {
+    if (decision === "REJECTED" && !confirm("সংশোধন রিকোয়েস্ট বাতিল করতে চান?")) return;
+    
+    setProcessingId(id);
+    const res = await handleCorrectionDecision(id, decision);
+    setProcessingId(null);
+    if (!res.success) {
+      alert("Error: " + res.error);
+    } else {
+      alert(`রিকোয়েস্ট ${decision === "APPROVED" ? "অনুমোদিত" : "বাতিল"} হয়েছে!`);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pt-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">অ্যাপ্রুভাল রিকোয়েস্ট <span className="text-sm font-normal text-gray-500">(Pending Approvals)</span></h1>
-          <p className="text-sm text-gray-500 mt-1">Review and approve requests from managers and clients.</p>
+          <h1 className="text-2xl font-bold text-gray-800">
+            অ্যাপ্রুভাল ও সংশোধন বোর্ড <span className="text-sm font-normal text-gray-500">(Approvals & Corrections)</span>
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Review pending operations and error correction requests.</p>
         </div>
-        <div className="flex bg-gray-100 p-1 rounded-lg">
+        <div className="flex bg-gray-100 p-1 rounded-xl">
           <button 
             onClick={() => setActiveTab("pending")}
-            className={`px-4 py-2 text-sm font-bold rounded-md transition-colors ${activeTab === "pending" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+            className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === "pending" ? "bg-white text-indigo-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
           >
-            Pending ({totalPending})
+            নতুন কাজ ({totalPending})
+          </button>
+          <button 
+            onClick={() => setActiveTab("corrections")}
+            className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === "corrections" ? "bg-white text-amber-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            ভুল সংশোধন ({pendingCorrections.length})
           </button>
         </div>
       </div>
@@ -152,8 +188,61 @@ export default function ApprovalsClient({
           ))}
 
         </div>
-      ) : null}
+      ) : (
+        /* Correction Requests Tab */
+        <div className="space-y-4">
+          {pendingCorrections.length === 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500 font-medium">
+              <CheckCircle2 size={48} className="mx-auto text-emerald-300 mb-3" />
+              <p>কোনো পেন্ডিং ভুল সংশোধন রিকোয়েস্ট নেই। (No pending correction requests.)</p>
+            </div>
+          )}
 
+          {pendingCorrections.map((corr) => (
+            <div key={corr.id} className="bg-white p-5 rounded-xl shadow-sm border border-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-amber-500">
+              <div>
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="flex items-center px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-bold">
+                    <FileEdit size={12} className="mr-1" /> {corr.targetType} Correction
+                  </span>
+                  <span className="text-xs text-gray-500 flex items-center font-bold">
+                    <Clock size={12} className="mr-1" /> {new Date(corr.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <h3 className="font-bold text-gray-800 text-base">
+                  Target Record ID: <span className="font-mono text-sm bg-gray-100 px-1.5 py-0.5 rounded">{corr.targetId}</span>
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Requested by: <span className="font-bold text-gray-800 capitalize">{corr.requesterId}</span>
+                </p>
+                <div className="mt-2 bg-amber-50 border border-amber-100 p-3 rounded-lg text-sm text-amber-950 font-medium">
+                  <p className="text-xs font-bold text-amber-800 uppercase mb-0.5">সংশোধনের বিবরণ ও কারণ:</p>
+                  {corr.details}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 mt-4 md:mt-0">
+                <button
+                  onClick={() => handleCorrectionAction(corr.id, "REJECTED")}
+                  disabled={processingId === corr.id}
+                  className="flex items-center space-x-1 px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+                >
+                  <XCircle size={18} />
+                  <span>Reject</span>
+                </button>
+                <button
+                  onClick={() => handleCorrectionAction(corr.id, "APPROVED")}
+                  disabled={processingId === corr.id}
+                  className="flex items-center space-x-1 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-bold text-sm transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {processingId === corr.id ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                  <span>Approve</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

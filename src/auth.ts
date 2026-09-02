@@ -1,22 +1,62 @@
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
-import NextAuth from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-
-export const { handlers, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
-      credentials: {},
-      async authorize() {
-        return { id: "1", name: "owner", role: "OWNER" }
-      }
-    })
-  ]
-})
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.username || !credentials?.password) return null;
 
-// MOCK AUTH TO ALWAYS RETURN A SESSION
-export const auth = async () => {
-    return {
-        user: { id: "1", name: "owner", role: "OWNER" }
-    }
-}
+        const username = String(credentials.username).toLowerCase().trim();
+        const password = String(credentials.password);
+
+        const user = await prisma.user.findUnique({
+          where: { username },
+        });
+
+        if (!user) return null;
+
+        // Compare plain text or bcrypt hash
+        let isMatch = user.password === password;
+        if (!isMatch && user.password.startsWith("$2")) {
+          isMatch = await bcrypt.compare(password, user.password);
+        }
+
+        if (!isMatch) return null;
+
+        return {
+          id: user.id,
+          name: user.username,
+          role: user.role,
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as any).role;
+      }
+      return token;
+    },
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        (session.user as any).role = token.role as string;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: "/login",
+  },
+  secret: process.env.AUTH_SECRET || "bangla-erp-secret-key-1234567890",
+});

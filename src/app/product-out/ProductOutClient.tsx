@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
-import { PackageMinus, Search, Save, CalendarDays } from "lucide-react";
+import { PackageMinus, Search, Save, CalendarDays, Printer, FileEdit } from "lucide-react";
 import { createInvoice } from "@/actions/invoiceActions";
 import { useRouter } from "next/navigation";
+import PrintableInvoiceModal from "@/components/PrintableInvoiceModal";
+import CorrectionRequestModal from "@/components/CorrectionRequestModal";
 
 export default function ProductOutClient({ initialInvoices, clients, userRole }: { initialInvoices: any[], clients: any[], userRole: string }) {
   const router = useRouter();
@@ -14,6 +16,8 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
+  const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<any | null>(null);
+  const [correctionInvoiceId, setCorrectionInvoiceId] = useState<string | null>(null);
 
   const totalAmount = (parseFloat(quantity) || 0) * (parseFloat(price) || 0);
 
@@ -164,6 +168,7 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
                 <th className="p-4 font-bold text-gray-700 text-center">পরিমাণ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Qty)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-right">মোট টাকা <span className="text-[10px] font-normal text-gray-400 block uppercase">(Total)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-right">স্ট্যাটাস <span className="text-[10px] font-normal text-gray-400 block uppercase">(Status)</span></th>
+                <th className="p-4 font-bold text-gray-700 text-right">অ্যাকশন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Action)</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -188,17 +193,48 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
                       <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-bold">Pending</span>
                     )}
                   </td>
+                  <td className="p-4 text-right space-x-2 whitespace-nowrap">
+                    <button
+                      onClick={() => setSelectedInvoiceForPrint(inv)}
+                      className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors inline-flex items-center"
+                      title="চালান প্রিন্ট করুন"
+                    >
+                      <Printer size={15} />
+                    </button>
+                    <button
+                      onClick={() => setCorrectionInvoiceId(inv.id)}
+                      className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition-colors inline-flex items-center"
+                      title="ভুল সংশোধনের রিকোয়েস্ট পাঠান"
+                    >
+                      <FileEdit size={15} />
+                    </button>
+                  </td>
                 </tr>
               ))}
               {initialInvoices.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-400">No invoices found.</td>
+                  <td colSpan={7} className="p-8 text-center text-gray-400">No invoices found.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Modals */}
+      <PrintableInvoiceModal
+        isOpen={Boolean(selectedInvoiceForPrint)}
+        onClose={() => setSelectedInvoiceForPrint(null)}
+        invoice={selectedInvoiceForPrint}
+      />
+
+      <CorrectionRequestModal
+        isOpen={Boolean(correctionInvoiceId)}
+        onClose={() => setCorrectionInvoiceId(null)}
+        targetType="INVOICE"
+        targetId={correctionInvoiceId || ""}
+        requesterRole={userRole}
+      />
     </div>
   );
 }
