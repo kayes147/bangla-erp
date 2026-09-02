@@ -90,7 +90,12 @@ export default async function MainCash() {
             <thead className="bg-white border-b border-gray-200">
               <tr>
                 <th className="p-4 font-bold text-gray-700">Date <span className="text-[10px] font-normal text-gray-400 block uppercase">(তারিখ)</span></th>
-                <th className="p-4 font-bold text-gray-700">Description <span className="text-[10px] font-normal text-gray-400 block uppercase">(বিবরণ)</span></th>
+                <th className="p-4 font-bold text-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>Description <span className="text-[10px] font-normal text-gray-400 block uppercase">(বিবরণ)</span></div>
+                    <div className="text-right">Invoice ID <span className="text-[10px] font-normal text-gray-400 block uppercase">(চালান নং)</span></div>
+                  </div>
+                </th>
                 <th className="p-4 font-bold text-green-600 text-right">In <span className="text-[10px] font-normal text-gray-400 block uppercase">(জমা)</span></th>
                 <th className="p-4 font-bold text-red-600 text-right">Out <span className="text-[10px] font-normal text-gray-400 block uppercase">(খরচ)</span></th>
               </tr>

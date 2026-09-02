@@ -212,7 +212,12 @@ export default async function Home() {
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <th className="p-4 font-medium">Type</th>
-                  <th className="p-4 font-medium">Details</th>
+                  <th className="p-4 font-medium">
+                    <div className="flex items-center justify-between">
+                      <span>Details (বিবরণ)</span>
+                      <span>Invoice ID (চালান নং)</span>
+                    </div>
+                  </th>
                   <th className="p-4 font-medium">Date</th>
                   <th className="p-4 font-medium">Amount</th>
                   <th className="p-4 font-medium">Status</th>
