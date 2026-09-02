@@ -158,18 +158,19 @@ export async function approveExpense(id: string) {
         data: { status: "APPROVED" }
       });
 
-      // 2. Create transaction
-      await tx.transaction.create({
-        data: {
-          type: "out",
-          amount: expense.amount,
-          description: expense.description,
-          status: "APPROVED",
-
-          expense: { connect: { id: expense.id } },
-          requestedBy: expense.requestedBy
-        }
-      });
+      // 2. Create transaction ONLY if business expense or personal expense from business cash
+      if (!expense.isPersonal || expense.paymentMethod === "business_cash") {
+        await tx.transaction.create({
+          data: {
+            type: "out",
+            amount: expense.amount,
+            description: `[Expense${expense.isPersonal ? " - ব্যক্তিগত" : ""}] ${expense.description}`,
+            status: "APPROVED",
+            expense: { connect: { id: expense.id } },
+            requestedBy: expense.requestedBy
+          }
+        });
+      }
     });
 
     revalidatePath("/approvals");

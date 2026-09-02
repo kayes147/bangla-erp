@@ -9,14 +9,13 @@ export async function addExpense(data: {
   amount: number;
   description: string;
   isPersonal: boolean;
+  paymentMethod?: string; // "business_cash" or "other_source"
   requestedBy: string; // the username (e.g., 'manager' or 'owner')
 }) {
   try {
-    // If the manager creates a personal expense, it's PENDING.
-    // If the owner creates any expense, it's APPROVED.
-    // If the manager creates a business expense, it's APPROVED (or PENDING depending on rules, let's assume APPROVED for now).
     const isOwner = data.requestedBy === "owner";
     const status = (data.isPersonal && !isOwner) ? "PENDING" : "APPROVED";
+    const paymentMethod = data.paymentMethod || (data.isPersonal ? "business_cash" : "cash");
 
     const expense = await prisma.expense.create({
       data: {
@@ -26,42 +25,60 @@ export async function addExpense(data: {
             create: { name: data.category }
           }
         },
-        amount: data.amount,
+        amount: Number(data.amount),
         description: data.description,
         isPersonal: data.isPersonal,
-        paymentMethod: "cash", // Added default to fix missing field
+        paymentMethod: paymentMethod,
         requestedBy: data.requestedBy,
         status: status,
       },
     });
 
-    // If it's APPROVED immediately, create a transaction for it (Cash Out)
+    // If it's APPROVED immediately, check whether to create Main Cash Transaction
     if (status === "APPROVED") {
-      await prisma.transaction.create({
-        data: {
-          type: "out",
-          amount: data.amount,
-          description: `[Expense] ${data.category}: ${data.description}`,
-          status: "APPROVED",
-          requestedBy: data.requestedBy,
-        },
-      });
+      // Deduct from Main Cash only if it's a business expense OR personal expense from business cash
+      const shouldDeductMainCash = !data.isPersonal || paymentMethod === "business_cash";
+
+      if (shouldDeductMainCash) {
+        try {
+          await prisma.transaction.create({
+            data: {
+              type: "out",
+              amount: Number(data.amount),
+              description: `[খরচ${data.isPersonal ? " (ব্যক্তিগত)" : ""}] ${data.category}: ${data.description}`,
+              status: "APPROVED",
+              requestedBy: data.requestedBy,
+              expense: { connect: { id: expense.id } },
+            },
+          });
+        } catch (txErr) {
+          console.warn("Main cash transaction creation warning:", txErr);
+        }
+      }
     }
 
-    revalidatePath("/expenses");
-    revalidatePath("/main-cash");
-    revalidatePath("/");
+    try {
+      revalidatePath("/expenses");
+      revalidatePath("/main-cash");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidate path warning:", e);
+    }
     
-    await recordAuditLog(
-      data.requestedBy,
-      "ADD_EXPENSE",
-      `Added ${data.isPersonal ? "Personal" : "Business"} expense of ৳${data.amount.toLocaleString()} in '${data.category}' (${status})`
-    );
+    try {
+      await recordAuditLog(
+        data.requestedBy,
+        "ADD_EXPENSE",
+        `Added ${data.isPersonal ? "Personal" : "Business"} expense of ৳${Number(data.amount).toLocaleString()} in '${data.category}' (${status}, Source: ${paymentMethod === "other_source" ? "ব্যক্তিগত/অন্যান্য তহবিল" : "ব্যবসার ক্যাশ"})`
+      );
+    } catch (e) {
+      console.warn("Audit log recording warning:", e);
+    }
 
     return { success: true, expense };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding expense:", error);
-    return { success: false, error: "Failed to add expense" };
+    return { success: false, error: error?.message || "Failed to add expense" };
   }
 }
 
@@ -78,23 +95,23 @@ export async function getExpenses() {
     }));
 
     return { success: true, expenses: formattedExpenses };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching expenses:", error);
-    return { success: false, error: "Failed to fetch expenses", expenses: [] };
+    return { success: false, error: error?.message || "Failed to fetch expenses", expenses: [] };
   }
 }
 
 export async function deleteExpense(id: string) {
   try {
-    // Also delete the related transaction? This is tricky because we only linked them via description.
-    // For simplicity in this mockup, we just delete the expense record.
     await prisma.expense.delete({
       where: { id },
     });
     revalidatePath("/expenses");
+    revalidatePath("/main-cash");
+    revalidatePath("/");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting expense:", error);
-    return { success: false, error: "Failed to delete expense" };
+    return { success: false, error: error?.message || "Failed to delete expense" };
   }
 }

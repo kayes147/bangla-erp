@@ -17,6 +17,7 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [sourceOfFund, setSourceOfFund] = useState<"business_cash" | "other_source">("business_cash");
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +31,7 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
       amount: Number(amount),
       description,
       isPersonal: isPersonalExpense,
+      paymentMethod: isPersonalExpense ? sourceOfFund : "business_cash",
       requestedBy: mockRole,
     });
     
@@ -40,6 +42,7 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
       setAmount("");
       setDescription("");
       setIsPersonalExpense(false);
+      setSourceOfFund("business_cash");
       router.refresh();
     } else {
       alert(res.error);
@@ -60,10 +63,23 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  let todayTotal = 0;
+  let businessToday = 0;
+  let personalToday = 0;
+  let personalCashOutToday = 0;
+  let personalOtherToday = 0;
+
   initialExpenses.forEach(e => {
     if (new Date(e.date) >= today && e.status !== "REJECTED") {
-      todayTotal += e.amount;
+      if (!e.isPersonal) {
+        businessToday += e.amount;
+      } else {
+        personalToday += e.amount;
+        if (e.paymentMethod === "other_source") {
+          personalOtherToday += e.amount;
+        } else {
+          personalCashOutToday += e.amount;
+        }
+      }
     }
   });
 
@@ -109,20 +125,47 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-6 shadow-md text-white">
-          <p className="text-red-100 font-bold mb-1">আজকের খরচ <span className="text-[10px] font-normal uppercase opacity-80 block">(Today's Expenses)</span></p>
-          <h2 className="text-4xl font-bold">৳ {todayTotal.toLocaleString()}</h2>
-          <p className="text-xs mt-2 text-red-200">Total spent today</p>
+          <p className="text-red-100 font-bold mb-1">
+            {activeTab === "business" ? "আজকের ব্যবসায়িক খরচ" : "আজকের ব্যক্তিগত খরচ"}
+            <span className="text-[10px] font-normal uppercase opacity-80 block">
+              {activeTab === "business" ? "(Today's Business Expense)" : "(Today's Personal Expense)"}
+            </span>
+          </p>
+          <h2 className="text-4xl font-bold">
+            ৳ {(activeTab === "business" ? businessToday : personalToday).toLocaleString()}
+          </h2>
+          <p className="text-xs mt-2 text-red-200">
+            {activeTab === "business" ? "Total business spent today" : "Total personal spent today"}
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center">
-          <p className="font-bold text-gray-800 mb-1">এই সপ্তাহে <span className="text-[10px] font-normal text-gray-400 uppercase block">(This Week)</span></p>
-          <h2 className="text-2xl font-bold text-gray-900">৳ -</h2>
-        </div>
+        {activeTab === "personal" ? (
+          <>
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center">
+              <p className="font-bold text-red-700 mb-1">ব্যবসার ক্যাশ থেকে (-) <span className="text-[10px] font-normal text-gray-400 uppercase block">(From Business Cash)</span></p>
+              <h2 className="text-2xl font-bold text-red-600">৳ {personalCashOutToday.toLocaleString()}</h2>
+              <p className="text-xs text-gray-400 mt-1">মূল ক্যাশ থেকে মাইনাস হয়েছে</p>
+            </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center">
-          <p className="font-bold text-gray-800 mb-1">এই মাসে <span className="text-[10px] font-normal text-gray-400 uppercase block">(This Month)</span></p>
-          <h2 className="text-2xl font-bold text-gray-900">৳ -</h2>
-        </div>
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center">
+              <p className="font-bold text-blue-700 mb-1">ব্যক্তিগত / অন্যান্য তহবিল <span className="text-[10px] font-normal text-gray-400 uppercase block">(Personal / Other Source)</span></p>
+              <h2 className="text-2xl font-bold text-blue-600">৳ {personalOtherToday.toLocaleString()}</h2>
+              <p className="text-xs text-gray-400 mt-1">ক্যাশে প্রভাব পড়েনি (শুধু হিসাব)</p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center">
+              <p className="font-bold text-gray-800 mb-1">এই সপ্তাহে <span className="text-[10px] font-normal text-gray-400 uppercase block">(This Week)</span></p>
+              <h2 className="text-2xl font-bold text-gray-900">৳ -</h2>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center">
+              <p className="font-bold text-gray-800 mb-1">এই মাসে <span className="text-[10px] font-normal text-gray-400 uppercase block">(This Month)</span></p>
+              <h2 className="text-2xl font-bold text-gray-900">৳ -</h2>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Expenses History Table */}
@@ -144,7 +187,7 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
             <thead className="bg-white border-b border-gray-100">
               <tr>
                 <th className="p-4 font-bold text-gray-700">তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Date)</span></th>
-                <th className="p-4 font-bold text-gray-700">ক্যাটাগরি <span className="text-[10px] font-normal text-gray-400 block uppercase">(Category)</span></th>
+                <th className="p-4 font-bold text-gray-700">ক্যাটাগরি ও উৎস <span className="text-[10px] font-normal text-gray-400 block uppercase">(Category & Source)</span></th>
                 <th className="p-4 font-bold text-gray-700">বিবরণ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Description)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-right">টাকা <span className="text-[10px] font-normal text-gray-400 block uppercase">(Amount)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-center">অ্যাকশন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Action)</span></th>
@@ -173,7 +216,22 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                       {new Date(e.date).toLocaleDateString()}
                       {e.status === 'PENDING' && <span className="block text-[10px] text-orange-600 font-bold">Pending Manager Request</span>}
                     </td>
-                    <td className="p-4"><span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-bold">{e.category}</span></td>
+                    <td className="p-4">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-bold">
+                          {e.category}
+                        </span>
+                        {e.paymentMethod === "other_source" ? (
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold">
+                            ব্যক্তিগত তহবিল
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-[10px] font-bold">
+                            ব্যবসার ক্যাশ (-)
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-4 font-medium text-gray-800">{e.description} <span className="text-xs text-gray-400">({e.requestedBy})</span></td>
                     <td className="p-4 font-bold text-red-600 text-right">৳ {e.amount.toLocaleString()}</td>
                     <td className="p-4 text-center">
@@ -229,12 +287,63 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                 )}
                 
                 {isPersonalExpense && (
-                  <div className="bg-orange-50 border border-orange-100 p-3 rounded-lg">
-                    <p className="text-xs text-orange-800 font-medium">
-                      {mockRole === "manager" 
-                        ? "ম্যানেজার হিসেবে আপনি এই খরচটি ওনারের ব্যক্তিগত হিসাবে যুক্ত করার জন্য রিকোয়েস্ট পাঠাচ্ছেন। ওনার অ্যাপ্রুভ করলে এটি মূল ক্যাশ থেকে কাটা হবে।" 
-                        : "ওনার হিসেবে আপনি এটি সরাসরি নিজের ব্যক্তিগত খরচ হিসেবে সেভ করছেন। এটি অন্য কেউ দেখতে পাবে না।"}
-                    </p>
+                  <div className="bg-amber-50/90 border border-amber-200 p-4 rounded-xl space-y-3">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">
+                        টাকা খরচের উৎস নির্বাচন করুন (Source of Funds) <span className="text-red-500">*</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        টাকা কোথা থেকে খরচ হয়েছে তা বেছে নিন
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label
+                        onClick={() => setSourceOfFund("business_cash")}
+                        className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          sourceOfFund === "business_cash"
+                            ? "border-red-500 bg-white text-red-950 ring-2 ring-red-200 shadow-sm"
+                            : "border-gray-200 bg-white/70 text-gray-700 hover:bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="source_of_fund"
+                          checked={sourceOfFund === "business_cash"}
+                          onChange={() => setSourceOfFund("business_cash")}
+                          className="mt-1 text-red-600 focus:ring-red-500"
+                        />
+                        <div>
+                          <span className="font-bold text-sm block text-gray-900">ব্যবসার ক্যাশ থেকে</span>
+                          <span className="text-xs text-red-600 block mt-0.5 font-medium">
+                            মূল ক্যাশবক্স থেকে টাকা মাইনাস (-) হবে
+                          </span>
+                        </div>
+                      </label>
+
+                      <label
+                        onClick={() => setSourceOfFund("other_source")}
+                        className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          sourceOfFund === "other_source"
+                            ? "border-blue-500 bg-white text-blue-950 ring-2 ring-blue-200 shadow-sm"
+                            : "border-gray-200 bg-white/70 text-gray-700 hover:bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="source_of_fund"
+                          checked={sourceOfFund === "other_source"}
+                          onChange={() => setSourceOfFund("other_source")}
+                          className="mt-1 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div>
+                          <span className="font-bold text-sm block text-gray-900">ব্যক্তিগত / অন্যান্য তহবিল</span>
+                          <span className="text-xs text-blue-600 block mt-0.5 font-medium">
+                            শুধু হিসাব থাকবে, ক্যাশে কোনো প্রভাব নেই
+                          </span>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 )}
 
