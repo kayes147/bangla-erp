@@ -115,7 +115,7 @@ export async function createInvoice(data: {
 
           const typeLabel = data.type === "product_in" 
             ? `[${methodLabel}] পণ্য ইন (প্রতিষ্ঠান: ${clientName})` 
-            : `[${methodLabel}] পণ্য আউট (কাস্টমার: ${clientName})`;
+            : `[${methodLabel}] পণ্য আউট (প্রতিষ্ঠান: ${clientName})`;
 
           await tx.transaction.create({
             data: {

@@ -77,7 +77,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
       </div>
 
       {/* Form Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 relative z-20">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 relative">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             
@@ -94,10 +94,10 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
               <select 
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold bg-white"
                 required
               >
-                <option value="">প্রতিষ্ঠান সিলেক্ট করুন...</option>
+                <option value="">প্রতিষ্ঠান নির্বাচন করুন...</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>
                     {c.name} {c.phone ? `(${c.phone})` : ""}
@@ -299,8 +299,8 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
             <thead className="bg-white border-b border-gray-100">
               <tr>
                 <th className="p-4 font-bold text-gray-700">তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Date)</span></th>
-                <th className="p-4 font-bold text-gray-700">প্রতিষ্ঠান <span className="text-[10px] font-normal text-gray-400 block uppercase">(Supplier)</span></th>
-                <th className="p-4 font-bold text-gray-700">প্রোডাক্ট <span className="text-[10px] font-normal text-gray-400 block uppercase">(Product Name)</span></th>
+                <th className="p-4 font-bold text-gray-700">প্রতিষ্ঠান <span className="text-[10px] font-normal text-gray-400 block uppercase">(Company)</span></th>
+                <th className="p-4 font-bold text-gray-700">পণ্যের নাম <span className="text-[10px] font-normal text-gray-400 block uppercase">(Product Name)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-center">পরিমাণ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Qty)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-right">মোট টাকা <span className="text-[10px] font-normal text-gray-400 block uppercase">(Total)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-right">স্ট্যাটাস <span className="text-[10px] font-normal text-gray-400 block uppercase">(Status)</span></th>

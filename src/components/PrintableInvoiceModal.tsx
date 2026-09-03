@@ -113,12 +113,12 @@ export default function PrintableInvoiceModal({
           {/* Party Details */}
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs">
             <p className="font-bold text-gray-500 uppercase tracking-wider mb-1">
-              {isSale ? "ক্রেতা / গ্রাহকের বিবরণ:" : "প্রতিষ্ঠান / সাপ্লায়ারের বিবরণ:"}
+              প্রতিষ্ঠানের বিবরণ:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <p className="text-sm font-black text-gray-900">
-                  {invoice.client?.name || "সাধারন কাস্টমার"}
+                  {invoice.client?.name || "সাধারণ প্রতিষ্ঠান"}
                 </p>
                 {invoice.client?.address && (
                   <p className="text-gray-600">ঠিকানা: {invoice.client.address}</p>

@@ -102,7 +102,7 @@ export async function approveInvoice(id: string) {
         const clientName = client?.name || "Client";
         const typeLabel = invoice.type === "product_in" 
           ? `পণ্য ইন (প্রতিষ্ঠান: ${clientName})` 
-          : `পণ্য আউট (কাস্টমার: ${clientName})`;
+          : `পণ্য আউট (প্রতিষ্ঠান: ${clientName})`;
 
         await tx.transaction.create({
           data: {

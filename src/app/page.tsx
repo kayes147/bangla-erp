@@ -346,7 +346,7 @@ export default async function Home() {
 
                   if (t.description.startsWith("Payment for Invoice")) {
                     mainDesc = clientName 
-                      ? (t.type === "out" ? `পণ্য ইন (প্রতিষ্ঠান: ${clientName})` : `পণ্য আউট (কাস্টমার: ${clientName})`)
+                      ? (t.type === "out" ? `পণ্য ইন (প্রতিষ্ঠান: ${clientName})` : `পণ্য আউট (প্রতিষ্ঠান: ${clientName})`)
                       : (t.type === "out" ? "পণ্য ইন" : "পণ্য আউট");
                   }
 
@@ -397,7 +397,7 @@ export default async function Home() {
                   <Boxes size={20} className="text-indigo-600" />
                   <span>ইনভেন্টরি <span className="text-xs font-normal text-gray-500">(Inventory)</span></span>
                 </h2>
-                <p className="text-[11px] text-gray-500 mt-0.5">কতগুলি প্রোডাক্ট এসেছে, কতগুলি বের হয়েছে ও বর্তমান স্টক</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">কতগুলি পণ্য এসেছে, কতগুলি বের হয়েছে ও বর্তমান স্টক</p>
               </div>
               <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded">
                 {inventoryList.length} টি পণ্য

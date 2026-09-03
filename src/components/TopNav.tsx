@@ -43,7 +43,7 @@ export default function TopNav({
   const currentTitle = getPageTitle();
 
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-3 sm:px-6 z-20 gap-2 sm:gap-3 relative shrink-0">
+    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-3 sm:px-6 z-40 gap-2 sm:gap-3 relative shrink-0">
       {/* Left: Mobile Hamburger Button & Active Page Name */}
       <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
         {onToggleMobileMenu && (
