@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import ClientSidebar from "./ClientSidebar";
@@ -11,9 +12,19 @@ export default function LayoutWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Automatically close mobile menu when user changes page/route
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   // Pages that should NOT have the Sidebar and TopNav
-  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/portal/login" || pathname === "/select-company";
+  const isAuthPage = 
+    pathname === "/login" || 
+    pathname === "/register" || 
+    pathname === "/portal/login" || 
+    pathname === "/select-company";
   
   const isSuperAdmin = pathname.startsWith("/super-admin");
   const isClientPortal = pathname.startsWith("/portal") && !isAuthPage;
@@ -27,14 +38,24 @@ export default function LayoutWrapper({
   }
 
   return (
-    <>
-      {isClientPortal ? <ClientSidebar /> : <Sidebar />}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopNav />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+    <div className="flex h-screen w-full overflow-hidden bg-gray-50">
+      {/* Sidebar: Fixed on desktop (md:), Slide-over off-canvas drawer on mobile */}
+      {isClientPortal ? (
+        <ClientSidebar />
+      ) : (
+        <Sidebar 
+          mobileOpen={mobileMenuOpen} 
+          onClose={() => setMobileMenuOpen(false)} 
+        />
+      )}
+
+      {/* Main Content Viewport */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <TopNav onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-3 sm:p-6">
           {children}
         </main>
       </div>
-    </>
+    </div>
   );
 }

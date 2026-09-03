@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, ChevronDown, Building2, ShieldCheck } from "lucide-react";
+import { LogOut, ChevronDown, Building2, ShieldCheck, Menu } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import BengaliClock from "./BengaliClock";
 
-export default function TopNav() {
+export default function TopNav({
+  onToggleMobileMenu,
+}: {
+  onToggleMobileMenu?: () => void;
+}) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -32,26 +36,37 @@ export default function TopNav() {
   const currentTitle = getPageTitle();
 
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 z-20 gap-3 relative">
-      {/* Left: Active Section Name */}
-      <div className="flex items-center space-x-2 shrink-0">
-        <span className="text-base font-bold text-gray-800">
-          {currentTitle.bn} <span className="text-xs font-normal text-gray-400 hidden sm:inline">({currentTitle.en})</span>
+    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-3 sm:px-6 z-20 gap-2 sm:gap-3 relative shrink-0">
+      {/* Left: Mobile Hamburger Button & Active Page Name */}
+      <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            className="md:hidden p-2 rounded-xl text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors cursor-pointer active:scale-95"
+            title="মেনু খুলুন"
+            aria-label="Toggle Menu"
+          >
+            <Menu size={20} />
+          </button>
+        )}
+        <span className="text-sm sm:text-base font-bold text-gray-800 truncate max-w-[110px] xs:max-w-[140px] sm:max-w-none">
+          {currentTitle.bn} <span className="text-xs font-normal text-gray-400 hidden lg:inline">({currentTitle.en})</span>
         </span>
       </div>
 
-      {/* Center: Live Bengali Date & Digital Clock (Always visible across all pages) */}
-      <div className="flex items-center justify-center">
+      {/* Center: Live Bengali Date & Digital Clock */}
+      <div className="flex items-center justify-center shrink-0">
         <BengaliClock />
       </div>
 
       {/* Right: Clickable User Profile & Dropdown */}
-      <div className="relative">
+      <div className="relative shrink-0">
         <button
           onClick={() => setIsProfileOpen(!isProfileOpen)}
-          className="flex items-center space-x-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 py-1.5 px-3 rounded-xl transition-all cursor-pointer select-none"
+          className="flex items-center space-x-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 py-1 sm:py-1.5 px-2 sm:px-3 rounded-xl transition-all cursor-pointer select-none active:scale-95"
         >
-          <div className="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-bold text-xs uppercase shadow-sm">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-bold text-xs uppercase shadow-sm">
             {userName.charAt(0)}
           </div>
           <div className="text-left hidden sm:block">

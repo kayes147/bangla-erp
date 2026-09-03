@@ -47,9 +47,9 @@ export default function BengaliClock() {
 
   if (!time) {
     return (
-      <div className="flex items-center space-x-2 bg-slate-50 border border-gray-200 px-3 py-1.5 rounded-xl text-xs text-gray-400">
-        <Clock size={14} className="animate-spin text-gray-400" />
-        <span>সময় লোড হচ্ছে...</span>
+      <div className="flex items-center space-x-1.5 bg-slate-50 border border-gray-200 px-2.5 py-1 rounded-xl text-xs text-gray-400">
+        <Clock size={13} className="animate-spin text-gray-400" />
+        <span className="text-[11px]">লোড হচ্ছে...</span>
       </div>
     );
   }
@@ -75,21 +75,24 @@ export default function BengaliClock() {
   const formattedSeconds = toBengaliNumber(seconds.toString().padStart(2, "0"));
 
   return (
-    <div className="flex items-center space-x-2 sm:space-x-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 px-3 sm:px-4 py-1.5 rounded-xl text-emerald-950 shadow-2xs transition-all">
+    <div className="flex items-center space-x-1.5 sm:space-x-2.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-emerald-950 shadow-2xs transition-all">
       {/* Date */}
-      <div className="flex items-center space-x-1.5 text-xs font-bold">
-        <Calendar size={14} className="text-emerald-600 shrink-0" />
-        <span className="hidden md:inline text-emerald-800">{dayName}, </span>
-        <span className="text-gray-900 font-bold">{dateNum} {monthName} {yearNum}</span>
+      <div className="flex items-center space-x-1 text-[11px] sm:text-xs font-bold">
+        <Calendar size={13} className="text-emerald-600 shrink-0" />
+        <span className="hidden lg:inline text-emerald-800">{dayName}, </span>
+        <span className="text-gray-900 font-bold whitespace-nowrap">
+          <span className="hidden sm:inline">{dateNum} {monthName} {yearNum}</span>
+          <span className="sm:hidden">{dateNum} {monthName.slice(0, 3)}</span>
+        </span>
       </div>
 
       <span className="text-emerald-300 font-normal select-none">|</span>
 
       {/* Live Clock */}
-      <div className="flex items-center space-x-1.5 text-xs font-bold">
-        <Clock size={14} className="text-emerald-600 shrink-0" />
-        <span className="text-[11px] text-emerald-700 font-semibold">{period}</span>
-        <span className="font-mono tracking-wider text-gray-900 font-bold">
+      <div className="flex items-center space-x-1 text-[11px] sm:text-xs font-bold whitespace-nowrap">
+        <Clock size={13} className="text-emerald-600 shrink-0" />
+        <span className="text-[10px] sm:text-[11px] text-emerald-700 font-semibold hidden md:inline">{period}</span>
+        <span className="font-mono tracking-wide sm:tracking-wider text-gray-900 font-bold">
           {formattedHours}:{formattedMinutes}:{formattedSeconds}
         </span>
       </div>
