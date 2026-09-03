@@ -205,7 +205,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
       {/* History List Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative z-10">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-          <h2 className="font-bold text-gray-800">পণ্য ক্রয়ের তালিকা <span className="text-xs font-normal text-gray-500">(Product In History)</span></h2>
+          <h2 className="font-bold text-gray-800">পণ্য ইন তালিকা <span className="text-xs font-normal text-gray-500">(Product In History)</span></h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">

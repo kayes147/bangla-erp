@@ -99,41 +99,14 @@ export default async function Home() {
       {/* 6 Stat Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* Product Out / Sales */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div className="flex items-center mb-3">
-            <div className="p-2.5 rounded-full bg-blue-100 text-blue-600 mr-3">
-              <PackageMinus size={20} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-800">আজকের বিক্রি <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Today&apos;s Product Out)</span></p>
-              <p className="text-xl font-bold text-gray-900 mt-1">৳ {salesTotal.toLocaleString()}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-2 pt-3 border-t border-gray-100 text-xs">
-            <div className="text-center">
-              <span className="block text-gray-400">Products</span>
-              <span className="font-semibold text-gray-700">{salesProductCount} Pcs</span>
-            </div>
-            <div className="text-center border-l border-gray-100">
-              <span className="block text-gray-400">Received</span>
-              <span className="font-semibold text-green-600">৳ {salesReceived.toLocaleString()}</span>
-            </div>
-            <div className="text-center border-l border-gray-100">
-              <span className="block text-gray-400">Due</span>
-              <span className="font-semibold text-red-500">৳ {salesDue.toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Product In / Purchase */}
+        {/* Product In */}
         <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center mb-3">
             <div className="p-2.5 rounded-full bg-green-100 text-green-600 mr-3">
               <PackagePlus size={20} />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-800">আজকের ক্রয় <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Today&apos;s Product In)</span></p>
+              <p className="text-sm font-bold text-gray-800">আজকের ইন <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Product In)</span></p>
               <p className="text-xl font-bold text-gray-900 mt-1">৳ {purchasesTotal.toLocaleString()}</p>
             </div>
           </div>
@@ -149,6 +122,33 @@ export default async function Home() {
             <div className="text-center border-l border-gray-100">
               <span className="block text-gray-400">Due</span>
               <span className="font-semibold text-red-500">৳ {purchasesDue.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Product Out */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-3">
+            <div className="p-2.5 rounded-full bg-blue-100 text-blue-600 mr-3">
+              <PackageMinus size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800">আজকের আউট <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Product Out)</span></p>
+              <p className="text-xl font-bold text-gray-900 mt-1">৳ {salesTotal.toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-2 pt-3 border-t border-gray-100 text-xs">
+            <div className="text-center">
+              <span className="block text-gray-400">Products</span>
+              <span className="font-semibold text-gray-700">{salesProductCount} Pcs</span>
+            </div>
+            <div className="text-center border-l border-gray-100">
+              <span className="block text-gray-400">Received</span>
+              <span className="font-semibold text-green-600">৳ {salesReceived.toLocaleString()}</span>
+            </div>
+            <div className="text-center border-l border-gray-100">
+              <span className="block text-gray-400">Due</span>
+              <span className="font-semibold text-red-500">৳ {salesDue.toLocaleString()}</span>
             </div>
           </div>
         </div>

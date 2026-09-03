@@ -61,7 +61,7 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
         <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
           <PackageMinus size={24} />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800">পণ্য আউট / সেলস <span className="text-lg font-normal text-gray-500">(Product Out / Sales)</span></h1>
+        <h1 className="text-2xl font-bold text-gray-800">পণ্য আউট <span className="text-lg font-normal text-gray-500">(Product Out)</span></h1>
       </div>
 
       {/* Form Section */}
@@ -166,7 +166,7 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
       {/* History List Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative z-10">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-          <h2 className="font-bold text-gray-800">পণ্য বিক্রির তালিকা <span className="text-xs font-normal text-gray-500">(Sales History)</span></h2>
+          <h2 className="font-bold text-gray-800">পণ্য আউট তালিকা <span className="text-xs font-normal text-gray-500">(Product Out History)</span></h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
