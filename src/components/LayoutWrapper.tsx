@@ -38,7 +38,7 @@ export default function LayoutWrapper({
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-gray-50">
+    <div className="flex h-screen h-[100dvh] w-full overflow-hidden bg-gray-50">
       {/* Sidebar: Fixed on desktop (md:), Slide-over off-canvas drawer on mobile */}
       {isClientPortal ? (
         <ClientSidebar />
@@ -50,9 +50,9 @@ export default function LayoutWrapper({
       )}
 
       {/* Main Content Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <TopNav onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-3 sm:p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 px-3 sm:px-6 pt-3 sm:pt-6 pb-28 sm:pb-12 overscroll-contain">
           {children}
         </main>
       </div>

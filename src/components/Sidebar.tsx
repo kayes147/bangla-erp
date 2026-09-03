@@ -44,7 +44,7 @@ export default function Sidebar({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col h-full overflow-y-auto overflow-x-hidden transition-transform duration-300 ease-in-out shrink-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col h-full h-[100dvh] overflow-y-auto overflow-x-hidden transition-transform duration-300 ease-in-out shrink-0 ${
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
