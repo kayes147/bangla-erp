@@ -30,7 +30,7 @@ export default function LoanClient({
 }) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterTab, setFilterTab] = useState<"all" | "product_in" | "product_out" | "overdue">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "overdue">("all");
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<any | null>(null);
 
   // Tagada / Reminder Modal State
@@ -77,9 +77,7 @@ export default function LoanClient({
     const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || clientPhone.includes(searchTerm);
     if (!matchesSearch) return false;
 
-    // Tab filter
-    if (filterTab === "product_in") return inv.type === "product_in";
-    if (filterTab === "product_out") return inv.type === "product_out";
+    // Tab filter: only 'overdue' filters, 'all' shows all dues
     if (filterTab === "overdue") {
       return inv.dueDate && new Date(inv.dueDate) < now;
     }
@@ -233,7 +231,7 @@ export default function LoanClient({
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <button
             onClick={() => setFilterTab("all")}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
               filterTab === "all"
                 ? "bg-amber-600 text-white shadow-sm"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -242,34 +240,14 @@ export default function LoanClient({
             সব বকেয়া ({initialInvoices.filter(i => i.totalAmount > i.paidAmount).length})
           </button>
           <button
-            onClick={() => setFilterTab("product_in")}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
-              filterTab === "product_in"
+            onClick={() => setFilterTab("overdue")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              filterTab === "overdue"
                 ? "bg-red-600 text-white shadow-sm"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            মহাজনের বাকি (Product In)
-          </button>
-          <button
-            onClick={() => setFilterTab("product_out")}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
-              filterTab === "product_out"
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            কাস্টমারের বাকি (Product Out)
-          </button>
-          <button
-            onClick={() => setFilterTab("overdue")}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
-              filterTab === "overdue"
-                ? "bg-amber-700 text-white shadow-sm"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            তারিখ পার হয়েছে ({overdueCount})
+            তারিখ পার হয়েছে ({overdueCount})
           </button>
         </div>
 
