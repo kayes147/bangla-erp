@@ -1,10 +1,12 @@
 "use client";
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Home, PackagePlus, PackageMinus, Wallet, Receipt, Landmark, Users, Settings, UserCog, ChevronDown, ChevronUp, LogOut, CalendarClock } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
 export default function Sidebar() {
+  const pathname = usePathname();
   const [isHrOpen, setIsHrOpen] = useState(false);
 
   return (
@@ -14,31 +16,59 @@ export default function Sidebar() {
         <p className="text-[11px] text-slate-400 mt-1">Powered by <span className="text-[13px] text-blue-400 font-bold">Bangla</span> <span className="text-[13px] font-medium text-slate-300">ERP</span></p>
       </div>
       <nav className="flex-1 p-4 space-y-1 text-sm font-bold">
-        <Link href="/" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors bg-slate-800">
+        <Link 
+          href="/" 
+          prefetch={false} 
+          className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${pathname === '/' ? 'bg-slate-800 text-white' : 'text-slate-300'}`}
+        >
           <Home size={18} />
           <span>ড্যাশবোর্ড <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Dashboard)</span></span>
         </Link>
-        <Link href="/product-in" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
+        <Link 
+          href="/product-in" 
+          prefetch={false} 
+          className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${pathname.startsWith('/product-in') ? 'bg-slate-800 text-white' : 'text-slate-300'}`}
+        >
           <PackagePlus size={18} />
           <span>পণ্য ইন <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Product In)</span></span>
         </Link>
-        <Link href="/product-out" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
+        <Link 
+          href="/product-out" 
+          prefetch={false} 
+          className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${pathname.startsWith('/product-out') ? 'bg-slate-800 text-white' : 'text-slate-300'}`}
+        >
           <PackageMinus size={18} />
           <span>পণ্য আউট <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Product Out)</span></span>
         </Link>
-        <Link href="/main-cash" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
+        <Link 
+          href="/main-cash" 
+          prefetch={false} 
+          className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${pathname.startsWith('/main-cash') ? 'bg-slate-800 text-white' : 'text-slate-300'}`}
+        >
           <Wallet size={18} />
           <span>মূল ক্যাশ <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Main Cash)</span></span>
         </Link>
-        <Link href="/expenses" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
+        <Link 
+          href="/expenses" 
+          prefetch={false} 
+          className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${pathname.startsWith('/expenses') ? 'bg-slate-800 text-white' : 'text-slate-300'}`}
+        >
           <Receipt size={18} />
           <span>দৈনিক খরচ <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Daily Expense)</span></span>
         </Link>
-        <Link href="/clients" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
+        <Link 
+          href="/clients" 
+          prefetch={false} 
+          className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${pathname.startsWith('/clients') ? 'bg-slate-800 text-white' : 'text-slate-300'}`}
+        >
           <Users size={18} />
           <span>মহাজন ও কাস্টমার <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Suppliers & Customers)</span></span>
         </Link>
-        <Link href="/loan" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
+        <Link 
+          href="/loan" 
+          prefetch={false} 
+          className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${pathname.startsWith('/loan') ? 'bg-slate-800 text-white' : 'text-slate-300'}`}
+        >
           <CalendarClock size={18} />
           <span>বকেয়া <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Due / বাকির হিসাব)</span></span>
         </Link>

@@ -15,13 +15,22 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { getPendingApprovals } from "@/actions/approvalActions";
 
+// Enforce real-time dynamic rendering on every request with zero cache
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export default async function Home() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Calculate today start and month start in Bangladesh Standard Time (UTC+6)
+  const now = new Date();
+  const bstTime = new Date(now.getTime() + 6 * 3600 * 1000);
+  const y = bstTime.getUTCFullYear();
+  const m = bstTime.getUTCMonth();
+  const d = bstTime.getUTCDate();
 
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  // 00:00:00 BST = UTC date minus 6 hours
+  const todayStart = new Date(Date.UTC(y, m, d, 0, 0, 0) - 6 * 3600 * 1000);
+  const monthStart = new Date(Date.UTC(y, m, 1, 0, 0, 0) - 6 * 3600 * 1000);
 
   let allTransactions: any[] = [];
   let mainCash = 0;
@@ -61,15 +70,15 @@ export default async function Home() {
       return t.type === 'in' ? acc + t.amount : acc - t.amount;
     }, 0);
 
-    // 2. Calculate Today's Expenses
+    // 2. Calculate Today's Expenses (from 00:00 BST today)
     todaysExpenses = await prisma.expense.findMany({
-      where: { date: { gte: today } }
+      where: { date: { gte: todayStart } }
     });
     dailyExpenseTotal = todaysExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     // 3. Today's Product Out (Sales)
     const todaysSales = await prisma.invoice.findMany({
-      where: { type: 'product_out', date: { gte: today } },
+      where: { type: 'product_out', date: { gte: todayStart } },
       include: { items: true }
     });
     salesTotal = todaysSales.reduce((sum, s) => sum + s.totalAmount, 0);
@@ -79,7 +88,7 @@ export default async function Home() {
 
     // 4. Today's Product In (Purchases)
     const todaysPurchases = await prisma.invoice.findMany({
-      where: { type: 'product_in', date: { gte: today } },
+      where: { type: 'product_in', date: { gte: todayStart } },
       include: { items: true }
     });
     purchasesTotal = todaysPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
@@ -87,19 +96,21 @@ export default async function Home() {
     purchasesDue = purchasesTotal - purchasesPaid;
     purchasesProductCount = todaysPurchases.reduce((sum, p) => sum + p.items.reduce((q, item) => q + item.quantity, 0), 0);
 
-    // 5. Total Loan/Due (Receivable/Payable)
-    const clients = await prisma.client.findMany();
-    totalDueReceivable = clients.reduce((sum, c) => c.openingBalance > 0 ? sum + c.openingBalance : sum, 0);
+    // 5. Total Due (ব্যবসায়ের মোট অপরিশোধিত বকেয়া হিসাব - exactly matching /loan)
+    const allInvoices = await prisma.invoice.findMany();
+    totalDueReceivable = allInvoices.reduce((sum, inv) => {
+      return sum + Math.max(0, inv.totalAmount - inv.paidAmount);
+    }, 0);
 
-    // 6. Monthly Profit
+    // 6. Monthly Profit (from 1st of month BST)
     const monthlySales = await prisma.invoice.findMany({
-      where: { type: 'product_out', date: { gte: startOfMonth } }
+      where: { type: 'product_out', date: { gte: monthStart } }
     });
     const monthlyPurchases = await prisma.invoice.findMany({
-      where: { type: 'product_in', date: { gte: startOfMonth } }
+      where: { type: 'product_in', date: { gte: monthStart } }
     });
     const monthlyExpenses = await prisma.expense.findMany({
-      where: { date: { gte: startOfMonth } }
+      where: { date: { gte: monthStart } }
     });
     
     const mSalesTotal = monthlySales.reduce((sum, s) => sum + s.totalAmount, 0);
@@ -125,9 +136,9 @@ export default async function Home() {
       let totalOut = 0;
 
       p.invoiceItems.forEach((item) => {
-        if (item.invoice?.type === "product_in" && item.invoice?.status === "APPROVED") {
+        if (item.invoice?.type === "product_in") {
           totalIn += item.quantity;
-        } else if (item.invoice?.type === "product_out" && item.invoice?.status === "APPROVED") {
+        } else if (item.invoice?.type === "product_out") {
           totalOut += item.quantity;
         }
       });
@@ -258,7 +269,7 @@ export default async function Home() {
             </div>
           </div>
           <div className="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 text-xs">
-            <span className="text-gray-400">Customer Net Receivable</span>
+            <span className="text-gray-400">ব্যবসায়ের মোট বকেয়ার পরিমাণ</span>
             <span className="font-medium text-purple-600">Pending</span>
           </div>
         </div>
@@ -295,7 +306,7 @@ export default async function Home() {
               <h2 className="text-lg font-bold text-gray-800">সাম্প্রতিক লেনদেন (Recent Transactions)</h2>
               <p className="text-xs text-gray-500 mt-0.5">রিয়েল-টাইম সর্বশেষ ক্যাশ ইন, ক্যাশ আউট ও খরচের তালিকা</p>
             </div>
-            <Link href="/main-cash" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
+            <Link href="/main-cash" prefetch={false} className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
               View All
             </Link>
           </div>
@@ -316,8 +327,8 @@ export default async function Home() {
                 </tr>
               </thead>
               <tbody>
-                {/* 8 Most Recent Transactions (sorted newest first) */}
-                {allTransactions.slice(0, 8).map((t) => {
+                {/* 10 Most Recent Transactions (sorted newest first) */}
+                {allTransactions.slice(0, 10).map((t) => {
                   const invoiceIdFromDesc = t.description?.match(/#([a-zA-Z0-9]+)/)?.[1];
                   const rawInvId = t.invoiceId || invoiceIdFromDesc;
                   const displayInvId = rawInvId ? `#${rawInvId.slice(-8)}` : null;
@@ -455,7 +466,7 @@ export default async function Home() {
           {totalPending > 0 ? (
             <div className="flex flex-col items-center justify-center space-y-3">
               <p className="text-sm text-gray-600 font-medium">You have <span className="font-bold text-orange-600">{totalPending}</span> requests waiting for your approval.</p>
-              <Link href="/approvals" className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition-colors">
+              <Link href="/approvals" prefetch={false} className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 View & Approve Requests
               </Link>
             </div>
