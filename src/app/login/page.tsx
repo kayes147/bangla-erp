@@ -31,38 +31,10 @@ export default function LoginPage() {
       } else {
         const sessionRes = await fetch("/api/auth/session");
         const sessionData = await sessionRes.json();
-        if (sessionData?.user?.role === "CLIENT") {
-          router.push("/portal/dashboard");
-        } else {
-          router.push("/");
-        }
-        router.refresh();
-      }
-    } catch (err: any) {
-      setErrorMsg("লগইন করতে সমস্যা হচ্ছে।");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickDemo = async (user: string, pass: string) => {
-    setUsername(user);
-    setPassword(pass);
-    setErrorMsg("");
-    setLoading(true);
-
-    try {
-      const res = await signIn("credentials", {
-        username: user,
-        password: pass,
-        redirect: false,
-      });
-
-      if (res?.error) {
-        setErrorMsg("ভুল ইউজারনেম বা পাসওয়ার্ড! আবার চেষ্টা করুন।");
-      } else {
-        if (user.toLowerCase().trim() === "kayes147@") {
+        if (sessionData?.user?.role === "SUPER_ADMIN" || username.toLowerCase().trim() === "kayes147@") {
           router.push("/super-admin");
+        } else if (sessionData?.user?.role === "CLIENT") {
+          router.push("/portal/dashboard");
         } else {
           router.push("/");
         }
@@ -149,39 +121,6 @@ export default function LoginPage() {
               <ArrowRight size={18} />
             </button>
           </form>
-
-          {/* Quick Demo Logins */}
-          <div className="pt-2">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 text-center">
-              দ্রুত ডেমো লগইন (Quick Demo)
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemo("owner", "123")}
-                className="p-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 text-center transition-colors"
-              >
-                👑 ওনার (Owner)
-                <span className="block text-[10px] text-gray-500 font-normal">pass: 123 বা 1234</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo("manager", "123")}
-                className="p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-bold text-blue-800 text-center transition-colors"
-              >
-                👷 ম্যানেজার (Manager)
-                <span className="block text-[10px] text-gray-500 font-normal">pass: 123 বা 1234</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo("kayes147@", "147570pmBD@147")}
-                className="col-span-2 p-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-black text-amber-900 text-center transition-colors flex items-center justify-center space-x-2"
-              >
-                <span>🛡️ সুপার অ্যাডমিন (kayes147@)</span>
-                <span className="text-[10px] text-amber-700 font-mono font-normal">pass: 147570pmBD@147</span>
-              </button>
-            </div>
-          </div>
 
           <div className="text-center pt-3 border-t border-gray-100">
             <p className="text-sm text-gray-600">

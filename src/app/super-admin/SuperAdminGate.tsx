@@ -8,8 +8,8 @@ import Link from "next/link";
 
 export default function SuperAdminGate() {
   const router = useRouter();
-  const [username, setUsername] = useState("kayes147@");
-  const [password, setPassword] = useState("147570pmBD@147");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -75,7 +75,7 @@ export default function SuperAdminGate() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-bold text-white placeholder-slate-500 outline-none focus:border-amber-500 transition-all font-mono"
-                placeholder="kayes147@"
+                placeholder="আপনার অ্যাডমিন আইডি লিখুন..."
               />
             </div>
           </div>
@@ -106,12 +106,6 @@ export default function SuperAdminGate() {
             <ArrowRight size={16} />
           </button>
         </form>
-
-        <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-2xl text-[11px] text-slate-400 space-y-1">
-          <p className="font-bold text-amber-400">🔑 অ্যাডমিন ক্রেডেনশিয়াল:</p>
-          <p>আইডি: <span className="font-mono text-white font-bold">kayes147@</span></p>
-          <p>পাসওয়ার্ড: <span className="font-mono text-white font-bold">147570pmBD@147</span></p>
-        </div>
 
         <div className="text-center pt-2">
           <Link href="/" className="text-xs text-slate-400 hover:text-white transition-colors">
