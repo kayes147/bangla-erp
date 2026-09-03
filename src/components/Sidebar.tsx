@@ -17,7 +17,8 @@ import {
   PhoneCall,
   MessageSquare,
   Mail,
-  X
+  X,
+  Bell
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -148,10 +149,23 @@ export default function Sidebar({
               href="/audit-logs" 
               prefetch={false} 
               onClick={onClose}
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors text-blue-400"
+              className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${
+                pathname.startsWith('/audit-logs') ? 'bg-slate-800 text-white' : 'text-blue-400'
+              }`}
             >
               <div className="w-3" />
               <span>কাজের হিস্ট্রি <span className="text-[10px] font-normal text-blue-300 block mt-0.5">(Audit Logs)</span></span>
+            </Link>
+            <Link 
+              href="/notifications" 
+              prefetch={false} 
+              onClick={onClose}
+              className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${
+                pathname.startsWith('/notifications') ? 'bg-slate-800 text-white' : 'text-purple-400'
+              }`}
+            >
+              <Bell size={18} className="shrink-0" />
+              <span>নোটিফিকেশন <span className="text-[10px] font-normal text-purple-300 block mt-0.5">(Notifications)</span></span>
             </Link>
           </div>
           
