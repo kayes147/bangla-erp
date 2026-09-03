@@ -72,7 +72,7 @@ export default function BengaliClock() {
   const displayHours = hours % 12 || 12;
   const formattedHours = toBengaliNumber(displayHours.toString().padStart(2, "0"));
   const formattedMinutes = toBengaliNumber(minutes.toString().padStart(2, "0"));
-  const formattedSeconds = toBengaliNumber(seconds.toString().padStart(2, "0"));
+  const amPm = hours >= 12 ? "PM" : "AM";
 
   return (
     <div className="flex items-center space-x-1.5 sm:space-x-2.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-emerald-950 shadow-2xs transition-all">
@@ -93,6 +93,9 @@ export default function BengaliClock() {
         <Clock size={13} className="text-emerald-600 shrink-0" />
         <span className="font-mono tracking-wide sm:tracking-wider text-gray-900 font-bold">
           {formattedHours}:{formattedMinutes}
+        </span>
+        <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 ml-0.5">
+          {amPm}
         </span>
       </div>
     </div>
