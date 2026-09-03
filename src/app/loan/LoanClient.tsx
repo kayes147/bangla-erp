@@ -49,20 +49,18 @@ export default function LoanClient({
   threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
   // Calculate stats
-  let totalSupplierDue = 0; // We owe suppliers (Product In)
-  let totalCustomerDue = 0; // Customers owe us (Product Out)
+  let totalDue = 0;
+  let pendingCount = 0;
   let overdueCount = 0;
 
   initialInvoices.forEach((inv) => {
     const due = Math.max(0, inv.totalAmount - inv.paidAmount);
-    if (inv.type === "product_in") {
-      totalSupplierDue += due;
-    } else {
-      totalCustomerDue += due;
-    }
-
-    if (inv.dueDate && new Date(inv.dueDate) < now && due > 0) {
-      overdueCount++;
+    if (due > 0) {
+      totalDue += due;
+      pendingCount++;
+      if (inv.dueDate && new Date(inv.dueDate) < now) {
+        overdueCount++;
+      }
     }
   });
 
@@ -182,44 +180,47 @@ export default function LoanClient({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-6 shadow-md text-white flex flex-col justify-between">
+        {/* মোট বকেয়া হিসাব */}
+        <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl p-6 shadow-md text-white flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <p className="text-red-100 font-bold">মহাজনদের বকেয়া দেনা</p>
-              <ArrowUpFromLine size={20} className="text-red-200" />
+              <p className="text-amber-100 font-bold">মোট বকেয়া হিসাব</p>
+              <CalendarClock size={22} className="text-amber-200" />
             </div>
-            <p className="text-[10px] text-red-200 uppercase mt-0.5">(Total Due to Suppliers - Payables)</p>
+            <p className="text-[10px] text-amber-200 uppercase mt-0.5">(Total Due Calculation)</p>
           </div>
           <div className="mt-4">
-            <h2 className="text-3xl font-bold">৳ {totalSupplierDue.toLocaleString()}</h2>
-            <p className="text-xs text-red-200 mt-1">পণ্য ইন করার কারণে মহাজনদের বাকি দিতে হবে</p>
+            <h2 className="text-3xl font-bold">৳ {totalDue.toLocaleString()}</h2>
+            <p className="text-xs text-amber-100 mt-1">ব্যবসায়ের মোট অপরিশোধিত বকেয়া টাকার পরিমাণ</p>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-6 shadow-md text-white flex flex-col justify-between">
+        {/* মোট বকেয়া চালান */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <p className="text-emerald-100 font-bold">কাস্টমারদের বকেয়া পাওনা</p>
-              <ArrowDownToLine size={20} className="text-emerald-200" />
+              <p className="font-bold text-gray-800">মোট বকেয়া চালান</p>
+              <ArrowDownToLine size={20} className="text-gray-400" />
             </div>
-            <p className="text-[10px] text-emerald-200 uppercase mt-0.5">(Total Due from Customers - Receivables)</p>
+            <p className="text-[10px] text-gray-400 uppercase mt-0.5">(Total Pending Invoices)</p>
           </div>
           <div className="mt-4">
-            <h2 className="text-3xl font-bold">৳ {totalCustomerDue.toLocaleString()}</h2>
-            <p className="text-xs text-emerald-200 mt-1">পণ্য আউট করার কারণে কাস্টমাররা জমা দেবে</p>
+            <h2 className="text-3xl font-bold text-gray-900">{pendingCount} টি চালান</h2>
+            <p className="text-xs text-gray-500 mt-1">যেসব চালানের টাকা এখনও বাকি আছে</p>
           </div>
         </div>
 
+        {/* তারিখ পার হওয়া বকেয়া */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <p className="font-bold text-gray-800">তারিখ পার হওয়া বকেয়া</p>
-              <AlertCircle size={20} className="text-amber-500" />
+              <AlertCircle size={20} className="text-red-500" />
             </div>
             <p className="text-[10px] text-gray-400 uppercase mt-0.5">(Overdue Invoices)</p>
           </div>
           <div className="mt-4">
-            <h2 className="text-3xl font-bold text-amber-600">{overdueCount} টি চালান</h2>
+            <h2 className="text-3xl font-bold text-red-600">{overdueCount} টি চালান</h2>
             <p className="text-xs text-gray-500 mt-1">প্রতিশ্রুত তারিখ পেরিয়ে গেছে</p>
           </div>
         </div>
@@ -270,7 +271,7 @@ export default function LoanClient({
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="p-4 font-bold text-gray-700">পার্টি / মহাজন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Party Name)</span></th>
+                <th className="p-4 font-bold text-gray-700">পার্টির নাম <span className="text-[10px] font-normal text-gray-400 block uppercase">(Party Name)</span></th>
                 <th className="p-4 font-bold text-gray-700">চালানের ধরন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Type)</span></th>
                 <th className="p-4 font-bold text-gray-700">বাকি শুরুর তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Due Start Date)</span></th>
                 <th className="p-4 font-bold text-gray-700">পরিশোধের তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Promised Payment Date)</span></th>
@@ -297,12 +298,12 @@ export default function LoanClient({
                     {/* Invoice Type */}
                     <td className="p-4">
                       {inv.type === "product_in" ? (
-                        <span className="inline-flex items-center px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-xs font-bold">
-                          মহাজনের দেনা (Product In)
+                        <span className="inline-flex items-center px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-bold">
+                          পণ্য ইন (Product In)
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-bold">
-                          কাস্টমারের পাওনা (Product Out)
+                        <span className="inline-flex items-center px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-bold">
+                          পণ্য আউট (Product Out)
                         </span>
                       )}
                     </td>
