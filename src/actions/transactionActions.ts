@@ -57,6 +57,17 @@ export async function addTransaction(data: {
       console.warn("Audit log recording warning:", e);
     }
 
+    // Auto-trigger 2nd Backup Vault snapshot
+    try {
+      const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
+      await createAutomatedBackupSnapshot(
+        data.type === "in" ? "AUTO_CASH_IN" : "AUTO_CASH_OUT",
+        `Cash ${data.type} of ৳${Number(data.amount).toLocaleString()} - "${data.description}"`
+      );
+    } catch (bErr) {
+      console.warn("Auto backup warning:", bErr);
+    }
+
     return { success: true, transaction };
   } catch (error: any) {
     console.error("Error adding transaction:", error);

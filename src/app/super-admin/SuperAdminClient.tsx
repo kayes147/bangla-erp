@@ -22,17 +22,28 @@ import {
   Boxes,
   Receipt,
   Wallet,
+  RotateCcw,
+  Trash2,
+  Zap,
+  ShieldCheck,
 } from "lucide-react";
-import { resetUserPassword, createSystemUser } from "@/actions/superAdminActions";
+import {
+  resetUserPassword,
+  createSystemUser,
+  restoreVaultSnapshot,
+  deleteVaultSnapshot,
+  manualTriggerVaultSnapshot,
+} from "@/actions/superAdminActions";
 import { useRouter } from "next/navigation";
 
 interface Props {
   metrics: any;
   users: any[];
   auditLogs: any[];
+  vaultSnapshots?: any[];
 }
 
-export default function SuperAdminClient({ metrics, users, auditLogs }: Props) {
+export default function SuperAdminClient({ metrics, users, auditLogs, vaultSnapshots }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "backup" | "logs">("overview");
 
@@ -114,6 +125,75 @@ export default function SuperAdminClient({ metrics, users, auditLogs }: Props) {
       }, 1500);
     } else {
       setCreateMessage({ type: "error", text: res.error || "ইউজার তৈরি ব্যর্থ হয়েছে।" });
+    }
+  };
+
+  // Automated 2nd Backup Vault State
+  const snapshots = vaultSnapshots || [];
+  const [restoreModalSnapshot, setRestoreModalSnapshot] = useState<any | null>(null);
+  const [deleteModalSnapshot, setDeleteModalSnapshot] = useState<any | null>(null);
+  const [vaultPassword, setVaultPassword] = useState("");
+  const [isVaultLoading, setIsVaultLoading] = useState(false);
+  const [vaultMessage, setVaultMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [manualTriggerLoading, setManualTriggerLoading] = useState(false);
+
+  const handleRestoreSnapshot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restoreModalSnapshot || !vaultPassword) return;
+
+    setIsVaultLoading(true);
+    setVaultMessage(null);
+
+    const res = await restoreVaultSnapshot({
+      snapshotId: restoreModalSnapshot.id,
+      passwordInput: vaultPassword,
+    });
+
+    setIsVaultLoading(false);
+    if (res.success) {
+      setVaultMessage({ type: "success", text: res.message || "ডাটাবেজ সফলভাবে রিস্টোর করা হয়েছে!" });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1800);
+    } else {
+      setVaultMessage({ type: "error", text: res.error || "রিস্টোর ব্যর্থ হয়েছে।" });
+    }
+  };
+
+  const handleDeleteSnapshot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deleteModalSnapshot || !vaultPassword) return;
+
+    setIsVaultLoading(true);
+    setVaultMessage(null);
+
+    const res = await deleteVaultSnapshot({
+      snapshotId: deleteModalSnapshot.id,
+      passwordInput: vaultPassword,
+    });
+
+    setIsVaultLoading(false);
+    if (res.success) {
+      setVaultMessage({ type: "success", text: "ব্যাকআপ স্ন্যাপশট সফলভাবে মুছে ফেলা হয়েছে।" });
+      setTimeout(() => {
+        setDeleteModalSnapshot(null);
+        setVaultPassword("");
+        setVaultMessage(null);
+        router.refresh();
+      }, 1200);
+    } else {
+      setVaultMessage({ type: "error", text: res.error || "ডিলিট ব্যর্থ হয়েছে।" });
+    }
+  };
+
+  const handleManualSnapshot = async () => {
+    setManualTriggerLoading(true);
+    const res = await manualTriggerVaultSnapshot();
+    setManualTriggerLoading(false);
+    if (res.success) {
+      router.refresh();
+    } else {
+      alert("ম্যানুয়াল ব্যাকআপ ব্যর্থ: " + (res.error || "Unknown error"));
     }
   };
 
@@ -471,60 +551,167 @@ export default function SuperAdminClient({ metrics, users, auditLogs }: Props) {
         </div>
       )}
 
-      {/* Tab 3: Database Backup */}
+      {/* Tab 3: Database Backup & 2nd Backup Vault */}
       {activeTab === "backup" && (
         <div className="space-y-6">
+          {/* Automated 2nd Backup Vault Panel */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+            <div className="p-6 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                    <Database size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-white flex items-center gap-2">
+                      স্বয়ংক্রিয় ২য় ব্যাকআপ ভল্ট (Automated 2nd Backup Store)
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase">
+                        Active Vault
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      যেকোনো ডাটা এন্ট্রি (চালান, প্রতিষ্ঠান, ক্যাশ, খরচ) হওয়ার সাথে সাথে স্বয়ংক্রিয়ভাবে এখানে অপরিবর্তনীয় স্ন্যাপশট জমা হয়।
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleManualSnapshot}
+                  disabled={manualTriggerLoading}
+                  className="flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <Zap size={14} />
+                  <span>{manualTriggerLoading ? "স্ন্যাপশট তৈরি হচ্ছে..." : "⚡ তাৎক্ষণিক নতুন স্ন্যাপশট তুলুন"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Vault Status Highlights */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-950/60 border-b border-slate-800 text-xs">
+              <div className="flex items-center space-x-2.5 text-slate-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">অটো-সিঙ্ক স্ট্যাটাস</p>
+                  <p className="font-bold text-emerald-400">প্রতিটি ডাটা এন্ট্রিতে স্বয়ংক্রিয় ২য় ব্যাকআপ</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2.5 text-slate-300">
+                <ShieldCheck size={18} className="text-amber-400 shrink-0" />
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">ডিলিট সুরক্ষা</p>
+                  <p className="font-bold text-amber-400">লকড (মাস্টার পাসওয়ার্ড ছাড়া ডিলিট অসম্ভব)</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2.5 text-slate-300">
+                <RotateCcw size={18} className="text-indigo-400 shrink-0" />
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">ডাটা রিস্টোর গ্যারান্টি</p>
+                  <p className="font-bold text-indigo-400">১-ক্লিকে যেকোনো স্ন্যাপশট থেকে রিস্টোর</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Snapshots Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-bold uppercase text-[10px]">
+                  <tr>
+                    <th className="p-4">স্ন্যাপশট সময় (Time BST)</th>
+                    <th className="p-4">ট্রিগার ইভেন্ট (Trigger)</th>
+                    <th className="p-4">বিস্তারিত বিবরণ (Details)</th>
+                    <th className="p-4 text-center">রেকর্ড সংখ্যা</th>
+                    <th className="p-4 text-right">অ্যাকশন (Actions)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {snapshots.map((s: any) => (
+                    <tr key={s.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="p-4 font-mono text-slate-300 whitespace-nowrap">
+                        {new Date(s.createdAt).toLocaleString()}
+                      </td>
+
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-slate-800 text-amber-400 border border-slate-700">
+                          {s.trigger}
+                        </span>
+                      </td>
+
+                      <td className="p-4 font-medium text-white max-w-xs truncate">
+                        {s.description}
+                      </td>
+
+                      <td className="p-4 text-center font-mono font-bold text-emerald-400">
+                        {s.recordCount} টি
+                      </td>
+
+                      <td className="p-4 text-right space-x-2 whitespace-nowrap">
+                        <button
+                          onClick={() => {
+                            setRestoreModalSnapshot(s);
+                            setVaultPassword("");
+                            setVaultMessage(null);
+                          }}
+                          className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-700/50 font-black text-xs transition-all active:scale-95 cursor-pointer"
+                          title="এই স্ন্যাপশট থেকে ডাটাবেজ পুনরুদ্ধার করুন"
+                        >
+                          <RotateCcw size={13} />
+                          <span>রিস্টোর</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setDeleteModalSnapshot(s);
+                            setVaultPassword("");
+                            setVaultMessage(null);
+                          }}
+                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-red-950 text-slate-500 hover:text-red-400 border border-slate-800 hover:border-red-800/50 font-bold text-xs transition-all active:scale-95 cursor-pointer"
+                          title="সুপার অ্যাডমিন পাসওয়ার্ড দিয়ে পার্জ করুন"
+                        >
+                          <Trash2 size={13} />
+                          <span>ডিলিট</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {snapshots.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-slate-500">
+                        এখনো কোনো ২য় ব্যাকআপ স্ন্যাপশট রেকর্ড নেই। উপরের "⚡ তাৎক্ষণিক নতুন স্ন্যাপশট তুলুন" বাটনে ক্লিক করুন।
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Direct JSON File Download Box */}
           <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 p-8 rounded-3xl shadow-xl space-y-6 text-center max-w-3xl mx-auto">
-            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
-              <Database size={32} />
+            <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+              <Download size={28} />
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white">সম্পূর্ণ ডাটাবেজ ব্যাকআপ ও এক্সপোর্ট</h2>
-              <p className="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto">
-                এক ক্লিকে আপনার সমস্ত ব্যবসায়িক তথ্য (প্রতিষ্ঠান, চালান, পণ্য, ক্যাশ খাতা, খরচ ও ইউজার) একটি নিরাপদ JSON ফাইলে ডাউনলোড করে সংরক্ষণ করুন।
+              <h2 className="text-xl font-black text-white">কম্পিউটারে সম্পূর্ণ ব্যাকআপ ডাউনলোড করুন (.JSON)</h2>
+              <p className="text-xs text-slate-400 max-w-lg mx-auto">
+                আপনার সমস্ত ব্যবসায়িক তথ্যের একটি অফলাইন কপি আপনার নিজের কম্পিউটারে সংরক্ষণ করতে নিচের বাটনে ক্লিক করুন।
               </p>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1">
               <a
                 href="/api/super-admin/backup"
                 download
-                className="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 px-8 py-3.5 rounded-2xl font-black text-sm shadow-xl shadow-amber-500/10 hover:shadow-amber-500/20 active:scale-95 transition-all cursor-pointer"
+                className="inline-flex items-center space-x-2 bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-amber-400 border border-amber-500/30 px-6 py-3 rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all cursor-pointer"
               >
-                <Download size={18} />
-                <span>এখনই সম্পূর্ণ ব্যাকআপ ডাউনলোড করুন (.JSON)</span>
+                <Download size={16} />
+                <span>কম্পিউটারে ব্যাকআপ ফাইল সেভ করুন (.JSON)</span>
               </a>
-            </div>
-
-            <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl text-left text-xs space-y-2 text-slate-400">
-              <p className="font-bold text-slate-200">📦 এই ব্যাকআপ ফাইলের ভেতরে যা যা সংরক্ষিত হবে:</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
-                <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex items-center gap-1.5">
-                  <Building2 size={13} className="text-indigo-400" />
-                  <span>প্রতিষ্ঠান: {metrics.totalClients} টি</span>
-                </div>
-                <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex items-center gap-1.5">
-                  <Boxes size={13} className="text-amber-400" />
-                  <span>পণ্য আইটেম: {metrics.totalProducts} টি</span>
-                </div>
-                <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex items-center gap-1.5">
-                  <FileText size={13} className="text-blue-400" />
-                  <span>চালান ও বিবরণ: {metrics.totalInvoices} টি</span>
-                </div>
-                <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex items-center gap-1.5">
-                  <Wallet size={13} className="text-emerald-400" />
-                  <span>ক্যাশ লেনদেন: {metrics.totalTransactions} টি</span>
-                </div>
-                <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex items-center gap-1.5">
-                  <Receipt size={13} className="text-red-400" />
-                  <span>দৈনিক খরচ: {metrics.totalExpenses} টি</span>
-                </div>
-                <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex items-center gap-1.5">
-                  <Users size={13} className="text-purple-400" />
-                  <span>লগইন ইউজার: {metrics.totalUsers} টি</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -745,6 +932,153 @@ export default function SuperAdminClient({ metrics, users, auditLogs }: Props) {
                   className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-indigo-600/10"
                 >
                   {isCreating ? "তৈরি হচ্ছে..." : "ইউজার অ্যাকাউন্ট তৈরি করুন"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Restore Snapshot Modal */}
+      {restoreModalSnapshot && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <RotateCcw size={18} className="text-emerald-400" />
+                <h3 className="font-extrabold text-white text-base">ডাটাবেজ রিস্টোর নিশ্চিতকরণ</h3>
+              </div>
+              <button
+                onClick={() => setRestoreModalSnapshot(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-emerald-950/30 border border-emerald-800/40 rounded-2xl text-xs space-y-1.5 text-slate-300">
+              <p className="font-bold text-emerald-400">⚠️ রিস্টোর করার পূর্বশর্ত:</p>
+              <p>এই ব্যাকআপটি কার্যকর করলে বর্তমান ডাটাবেজ এই স্ন্যাপশটের অবস্থায় ফিরে যাবে।</p>
+              <p className="font-mono text-slate-400 text-[11px] pt-1">
+                ট্রিগার: <span className="text-white font-bold">{restoreModalSnapshot.trigger}</span> | রেকর্ড: <span className="text-emerald-400 font-bold">{restoreModalSnapshot.recordCount} টি</span>
+              </p>
+              <p className="text-[11px] text-slate-400">
+                সময়: {new Date(restoreModalSnapshot.createdAt).toLocaleString()}
+              </p>
+            </div>
+
+            {vaultMessage && (
+              <div className={`p-3 rounded-xl text-xs font-bold flex items-center space-x-2 ${
+                vaultMessage.type === "success" ? "bg-emerald-950 border border-emerald-800 text-emerald-300" : "bg-red-950 border border-red-800 text-red-300"
+              }`}>
+                {vaultMessage.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <span>{vaultMessage.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleRestoreSnapshot} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  সুপার অ্যাডমিন মাস্টার পাসওয়ার্ড <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-500" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="সুপার অ্যাডমিন পাসওয়ার্ড লিখুন..."
+                    value={vaultPassword}
+                    onChange={(e) => setVaultPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm font-bold text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRestoreModalSnapshot(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 text-xs font-bold transition-all cursor-pointer"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVaultLoading || !vaultPassword}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-emerald-600/10"
+                >
+                  {isVaultLoading ? "রিস্টোর হচ্ছে..." : "এখনই ডাটাবেজ রিস্টোর করুন"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Snapshot Modal */}
+      {deleteModalSnapshot && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <Trash2 size={18} className="text-red-400" />
+                <h3 className="font-extrabold text-white text-base">ব্যাকআপ পার্জ / ডিলিট সুরক্ষা</h3>
+              </div>
+              <button
+                onClick={() => setDeleteModalSnapshot(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-2xl text-xs space-y-1 text-red-200">
+              <p className="font-bold text-red-400">🔒 সর্বোচ্চ নিরাপত্তা লক:</p>
+              <p>আপনার নির্দেশ অনুযায়ী এই ২য় ব্যাকআপ ডিলিট করার কোনো সাধারণ বাটন নেই।</p>
+              <p>শুধুমাত্র সুপার অ্যাডমিন মাস্টার পাসওয়ার্ড প্রদান করলে তবেই এটি মুছে ফেলা সম্ভব।</p>
+            </div>
+
+            {vaultMessage && (
+              <div className={`p-3 rounded-xl text-xs font-bold flex items-center space-x-2 ${
+                vaultMessage.type === "success" ? "bg-emerald-950 border border-emerald-800 text-emerald-300" : "bg-red-950 border border-red-800 text-red-300"
+              }`}>
+                {vaultMessage.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <span>{vaultMessage.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleDeleteSnapshot} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  সুপার অ্যাডমিন মাস্টার পাসওয়ার্ড ইনপুট দিন <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <Lock size={15} className="absolute left-3.5 top-3.5 text-slate-500" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="মাস্টার পাসওয়ার্ড লিখুন..."
+                    value={vaultPassword}
+                    onChange={(e) => setVaultPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm font-bold text-white placeholder-slate-500 outline-none focus:border-red-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteModalSnapshot(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 text-xs font-bold transition-all cursor-pointer"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVaultLoading || !vaultPassword}
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-red-600/10"
+                >
+                  {isVaultLoading ? "যাচাই হচ্ছে..." : "স্থায়ীভাবে মুছে ফেলুন"}
                 </button>
               </div>
             </form>

@@ -3,6 +3,7 @@ import {
   getSuperAdminMetrics,
   getSuperAdminUsers,
   getSuperAdminAuditLogs,
+  getSuperAdminVaultSnapshots,
 } from "@/actions/superAdminActions";
 import SuperAdminClient from "./SuperAdminClient";
 import SuperAdminGate from "./SuperAdminGate";
@@ -29,10 +30,11 @@ export default async function SuperAdminPage() {
     return <SuperAdminGate />;
   }
 
-  const [metricsRes, usersRes, logsRes] = await Promise.all([
+  const [metricsRes, usersRes, logsRes, vaultRes] = await Promise.all([
     getSuperAdminMetrics(),
     getSuperAdminUsers(),
     getSuperAdminAuditLogs(),
+    getSuperAdminVaultSnapshots(),
   ]);
 
   return (
@@ -40,6 +42,7 @@ export default async function SuperAdminPage() {
       metrics={metricsRes.metrics || {}}
       users={usersRes.users || []}
       auditLogs={logsRes.logs || []}
+      vaultSnapshots={vaultRes.snapshots || []}
     />
   );
 }

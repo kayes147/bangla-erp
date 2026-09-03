@@ -156,6 +156,17 @@ export async function createInvoice(data: {
       console.warn("Audit log warning:", auditErr);
     }
 
+    // Auto-trigger 2nd Backup Vault snapshot
+    try {
+      const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
+      await createAutomatedBackupSnapshot(
+        data.type === "product_in" ? "AUTO_PRODUCT_IN" : "AUTO_PRODUCT_OUT",
+        `Invoice #${result.id.slice(0, 8)} (${data.type}) for ৳${result.totalAmount.toLocaleString()} (${data.status})`
+      );
+    } catch (bErr) {
+      console.warn("Auto backup warning:", bErr);
+    }
+
     return { success: true, invoice: result };
   } catch (error: any) {
     console.error("Error creating invoice:", error);
@@ -284,6 +295,17 @@ export async function settleInvoiceDue(data: {
       );
     } catch (e) {
       console.warn("Audit log warning:", e);
+    }
+
+    // Auto-trigger 2nd Backup Vault snapshot
+    try {
+      const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
+      await createAutomatedBackupSnapshot(
+        "AUTO_DUE_SETTLED",
+        `Settled due of ৳${Number(data.amount).toLocaleString()} for Invoice #${invoice.id.substring(0, 8)} (${invoice.client.name})`
+      );
+    } catch (bErr) {
+      console.warn("Auto backup warning:", bErr);
     }
 
     return { success: true };

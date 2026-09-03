@@ -220,3 +220,14 @@ model Loan {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
+
+// Automated 2nd Backup Vault (Immutable Secondary Store)
+model BackupVault {
+  id          String   @id @default(cuid())
+  trigger     String   // e.g., "AUTO_INVOICE_CREATED", "AUTO_CLIENT_CREATED", "MANUAL_SNAPSHOT"
+  description String
+  recordCount Int
+  payload     String   @db.Text // Full JSON stringified database backup
+  createdAt   DateTime @default(now())
+}
+

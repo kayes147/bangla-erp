@@ -127,6 +127,17 @@ export async function approveInvoice(id: string) {
     
     await recordAuditLog("owner", "APPROVE_INVOICE", `Approved ${invoice.type === "product_in" ? "Product In" : "Product Out"} Invoice #${id.substring(0, 8)} for ৳${invoice.totalAmount.toLocaleString()}`);
 
+    // Auto-trigger 2nd Backup Vault snapshot
+    try {
+      const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
+      await createAutomatedBackupSnapshot(
+        "AUTO_INVOICE_APPROVED",
+        `Approved Invoice #${id.substring(0, 8)} (${invoice.type}) for ৳${invoice.totalAmount.toLocaleString()}`
+      );
+    } catch (bErr) {
+      console.warn("Auto backup warning:", bErr);
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error("Error approving invoice:", error);

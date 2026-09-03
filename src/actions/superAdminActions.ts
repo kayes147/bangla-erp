@@ -180,3 +180,50 @@ export async function getSuperAdminAuditLogs() {
     return { success: false, logs: [] };
   }
 }
+
+export async function getSuperAdminVaultSnapshots() {
+  const { getBackupVaultSnapshots } = await import("@/lib/backupVault");
+  return await getBackupVaultSnapshots();
+}
+
+export async function restoreVaultSnapshot(data: {
+  snapshotId: string;
+  passwordInput: string;
+}) {
+  const { restoreFromBackupSnapshot } = await import("@/lib/backupVault");
+  const res = await restoreFromBackupSnapshot(data.snapshotId, data.passwordInput);
+  if (res.success) {
+    revalidatePath("/super-admin");
+    revalidatePath("/");
+    revalidatePath("/product-in");
+    revalidatePath("/product-out");
+    revalidatePath("/clients");
+    revalidatePath("/main-cash");
+    revalidatePath("/expenses");
+  }
+  return res;
+}
+
+export async function deleteVaultSnapshot(data: {
+  snapshotId: string;
+  passwordInput: string;
+}) {
+  const { deleteBackupSnapshot } = await import("@/lib/backupVault");
+  const res = await deleteBackupSnapshot(data.snapshotId, data.passwordInput);
+  if (res.success) {
+    revalidatePath("/super-admin");
+  }
+  return res;
+}
+
+export async function manualTriggerVaultSnapshot() {
+  const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
+  const res = await createAutomatedBackupSnapshot(
+    "MANUAL_ADMIN_SNAPSHOT",
+    "Manual backup snapshot triggered from Super Admin Panel"
+  );
+  if (res.success) {
+    revalidatePath("/super-admin");
+  }
+  return res;
+}

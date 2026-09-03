@@ -80,6 +80,17 @@ export async function addExpense(data: {
       console.warn("Audit log recording warning:", e);
     }
 
+    // Auto-trigger 2nd Backup Vault snapshot
+    try {
+      const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
+      await createAutomatedBackupSnapshot(
+        "AUTO_EXPENSE_CREATED",
+        `Expense of ৳${Number(data.amount).toLocaleString()} in '${data.category}': ${data.description}`
+      );
+    } catch (bErr) {
+      console.warn("Auto backup warning:", bErr);
+    }
+
     return { success: true, expense };
   } catch (error: any) {
     console.error("Error adding expense:", error);

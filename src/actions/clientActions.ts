@@ -22,6 +22,18 @@ export async function createClient(data: {
     });
 
     revalidatePath("/clients");
+
+    // Auto-trigger 2nd Backup Vault snapshot
+    try {
+      const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
+      await createAutomatedBackupSnapshot(
+        "AUTO_COMPANY_CREATED",
+        `Created Company '${client.name}' (${client.phone}) with initial balance ৳${client.openingBalance}`
+      );
+    } catch (bErr) {
+      console.warn("Auto backup warning:", bErr);
+    }
+
     return { success: true, client };
   } catch (error) {
     console.error("Error creating client:", error);
