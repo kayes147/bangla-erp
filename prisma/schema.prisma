@@ -156,6 +156,7 @@ model Invoice {
   status         String         @default("APPROVED") // PENDING, APPROVED, REJECTED
   requestedBy    String?        // ID of user who requested
   dueDate        DateTime?      // Promised Payment Date for dues
+  paymentMethod  String?        // "cash", "mobile_banking", "bank"
   createdAt      DateTime       @default(now())
 
   items          InvoiceItem[]

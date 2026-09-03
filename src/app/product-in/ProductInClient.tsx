@@ -17,6 +17,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "mobile_banking" | "bank">("cash");
   const [dueDate, setDueDate] = useState("");
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<any | null>(null);
   const [correctionInvoiceId, setCorrectionInvoiceId] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
       requestedBy: userRole,
       status,
       dueDate: dueAmount > 0 ? dueDate : undefined,
+      paymentMethod: calculatedPaid > 0 ? paymentMethod : undefined,
     });
 
     setLoading(false);
@@ -56,6 +58,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
       setQuantity("");
       setPrice("");
       setPaidAmount("");
+      setPaymentMethod("cash");
       setDueDate("");
       router.refresh();
     } else {
@@ -162,6 +165,90 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
               />
             </div>
           </div>
+
+          {/* Payment Method Selector (Only when calculatedPaid > 0) */}
+          {calculatedPaid > 0 && (
+            <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-4 space-y-2 animate-in fade-in duration-150">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                  <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider block">
+                    টাকা পরিশোধের মাধ্যম (Payment Method) <span className="text-red-500">*</span>
+                  </span>
+                  <span className="text-xs text-emerald-700">
+                    জমা দেওয়া ৳ {calculatedPaid.toLocaleString()} টাকা কীভাবে পরিশোধ করা হয়েছে তা বেছে নিন
+                  </span>
+                </div>
+                <span className="self-start sm:self-auto px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-md border border-emerald-300">
+                  জমা: ৳ {calculatedPaid.toLocaleString()}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <label 
+                  onClick={() => setPaymentMethod("cash")}
+                  className={`flex items-center space-x-2.5 p-3 border rounded-xl cursor-pointer transition-all ${
+                    paymentMethod === "cash" 
+                      ? "border-emerald-500 bg-white text-emerald-950 ring-2 ring-emerald-300 font-bold shadow-xs" 
+                      : "border-gray-200 bg-white/70 text-gray-700 hover:bg-white font-medium"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    checked={paymentMethod === "cash"}
+                    onChange={() => setPaymentMethod("cash")}
+                    className="text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <span className="text-sm block">💵 নগদ ক্যাশ</span>
+                    <span className="text-[10px] text-gray-500 block font-normal">ক্যাশবক্স থেকে পরিশোধ</span>
+                  </div>
+                </label>
+
+                <label 
+                  onClick={() => setPaymentMethod("mobile_banking")}
+                  className={`flex items-center space-x-2.5 p-3 border rounded-xl cursor-pointer transition-all ${
+                    paymentMethod === "mobile_banking" 
+                      ? "border-purple-500 bg-white text-purple-950 ring-2 ring-purple-300 font-bold shadow-xs" 
+                      : "border-gray-200 bg-white/70 text-gray-700 hover:bg-white font-medium"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    checked={paymentMethod === "mobile_banking"}
+                    onChange={() => setPaymentMethod("mobile_banking")}
+                    className="text-purple-600 focus:ring-purple-500"
+                  />
+                  <div>
+                    <span className="text-sm block">📱 মোবাইল ব্যাংকিং</span>
+                    <span className="text-[10px] text-gray-500 block font-normal">বিকাশ / নগদ / রকেট</span>
+                  </div>
+                </label>
+
+                <label 
+                  onClick={() => setPaymentMethod("bank")}
+                  className={`flex items-center space-x-2.5 p-3 border rounded-xl cursor-pointer transition-all ${
+                    paymentMethod === "bank" 
+                      ? "border-blue-500 bg-white text-blue-950 ring-2 ring-blue-300 font-bold shadow-xs" 
+                      : "border-gray-200 bg-white/70 text-gray-700 hover:bg-white font-medium"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    checked={paymentMethod === "bank"}
+                    onChange={() => setPaymentMethod("bank")}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <div>
+                    <span className="text-sm block">🏦 সরাসরি ব্যাংক</span>
+                    <span className="text-[10px] text-gray-500 block font-normal">ব্যাংক ট্রান্সফার / চেক</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* Due Info & Payment Due Date Field (Only if there is due) */}
           {dueAmount > 0 && (

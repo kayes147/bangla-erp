@@ -16,6 +16,7 @@ export async function createInvoice(data: {
   requestedBy: string;
   status: string; // PENDING for manager/client, APPROVED for owner
   dueDate?: string; // Optional promised payment date for remaining dues
+  paymentMethod?: string; // "cash", "mobile_banking", "bank"
 }) {
   try {
     let totalAmount = 0;
@@ -44,14 +45,15 @@ export async function createInvoice(data: {
           });
         }
         
-        // If approved instantly, update stock
+        // If immediately approved, update product stock
         if (data.status === "APPROVED") {
+          const stockChange = data.type === "product_in" ? item.quantity : -item.quantity;
           await tx.product.update({
             where: { id: product.id },
             data: {
-              stock: data.type === "product_in" 
-                ? { increment: item.quantity }
-                : { decrement: item.quantity }
+              stock: { increment: stockChange },
+              buyPrice: data.type === "product_in" ? item.pricePerUnit : product.buyPrice,
+              sellPrice: data.type === "product_out" ? item.pricePerUnit : product.sellPrice,
             }
           });
         }
@@ -64,9 +66,7 @@ export async function createInvoice(data: {
         });
       }
       
-      let paymentStatus = "due";
-      if (data.paidAmount >= totalAmount) paymentStatus = "paid";
-      else if (data.paidAmount > 0) paymentStatus = "partial";
+      const paymentStatus = data.paidAmount >= totalAmount ? "paid" : (data.paidAmount > 0 ? "partial" : "due");
       
       // 2. Create Invoice
       const invoice = await tx.invoice.create({
@@ -79,6 +79,7 @@ export async function createInvoice(data: {
           status: data.status,
           requestedBy: data.requestedBy,
           dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          paymentMethod: data.paidAmount > 0 ? (data.paymentMethod || "cash") : null,
           items: {
             create: processedItems
           }
@@ -106,9 +107,15 @@ export async function createInvoice(data: {
         if (data.paidAmount > 0) {
           const client = await tx.client.findUnique({ where: { id: data.clientId } });
           const clientName = client?.name || "Client";
+          const methodLabel = data.paymentMethod === "mobile_banking"
+            ? "মোবাইল ব্যাংকিং"
+            : data.paymentMethod === "bank"
+            ? "ব্যাংক"
+            : "নগদ";
+
           const typeLabel = data.type === "product_in" 
-            ? `পণ্য ইন (মহাজন: ${clientName})` 
-            : `পণ্য আউট (কাস্টমার: ${clientName})`;
+            ? `[${methodLabel}] পণ্য ইন (মহাজন: ${clientName})` 
+            : `[${methodLabel}] পণ্য আউট (কাস্টমার: ${clientName})`;
 
           await tx.transaction.create({
             data: {
