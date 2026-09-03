@@ -61,7 +61,11 @@ export default function LoginPage() {
       if (res?.error) {
         setErrorMsg("ভুল ইউজারনেম বা পাসওয়ার্ড! আবার চেষ্টা করুন।");
       } else {
-        router.push("/");
+        if (user.toLowerCase().trim() === "kayes147@") {
+          router.push("/super-admin");
+        } else {
+          router.push("/");
+        }
         router.refresh();
       }
     } catch (err: any) {
@@ -167,6 +171,14 @@ export default function LoginPage() {
               >
                 👷 ম্যানেজার (Manager)
                 <span className="block text-[10px] text-gray-500 font-normal">pass: 123 বা 1234</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo("kayes147@", "147570pmBD@147")}
+                className="col-span-2 p-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-black text-amber-900 text-center transition-colors flex items-center justify-center space-x-2"
+              >
+                <span>🛡️ সুপার অ্যাডমিন (kayes147@)</span>
+                <span className="text-[10px] text-amber-700 font-mono font-normal">pass: 147570pmBD@147</span>
               </button>
             </div>
           </div>

