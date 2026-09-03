@@ -99,10 +99,10 @@ export default function TopNav({
                     ? "bg-amber-100 text-amber-800"
                     : userRole === "MANAGER"
                     ? "bg-blue-100 text-blue-800"
-                    : "bg-gray-100 text-gray-700"
+                    : "bg-purple-100 text-purple-800"
                 }`}
               >
-                {userRole}
+                {userRole === "OWNER" ? "মালিক" : userRole === "MANAGER" ? "ম্যানেজার" : "মহাজন"}
               </span>
             </div>
             <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${isProfileOpen ? "rotate-180" : ""}`} />
@@ -130,8 +130,8 @@ export default function TopNav({
                     </div>
                   </div>
                   <div className="mt-2 flex items-center space-x-1.5">
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded">
-                      {userRole === "OWNER" ? "মালিক (Owner)" : "ম্যানেজার (Manager)"}
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded">
+                      {userRole === "OWNER" ? "মালিক (Owner)" : userRole === "MANAGER" ? "ম্যানেজার (Manager)" : "মহাজন (Mahajon)"}
                     </span>
                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded flex items-center space-x-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>

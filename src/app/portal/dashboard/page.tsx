@@ -24,7 +24,11 @@ export default async function ClientDashboard() {
       include: {
         invoices: {
           include: {
-            items: true,
+            items: {
+              include: {
+                product: true,
+              },
+            },
           },
           orderBy: {
             date: "desc",
@@ -39,7 +43,13 @@ export default async function ClientDashboard() {
     client = await prisma.client.findFirst({
       include: {
         invoices: {
-          include: { items: true },
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
           orderBy: { date: "desc" },
         },
       },
@@ -49,15 +59,20 @@ export default async function ClientDashboard() {
   const clientName = client?.name || session.user.name || "মহাজন";
   const invoices = client?.invoices || [];
 
-  // Calculations from real invoices
+  // Calculations:
+  // 1. Total Paid: sum of paid amounts across all client invoices
   const totalPaid = invoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
-  const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
-  const currentDue = totalInvoiceAmount - totalPaid + (client?.openingBalance || 0);
+
+  // 2. Current Due: total unpaid invoice balances for this Mahajon (matches /loan and table rows)
+  const currentDue = invoices.reduce(
+    (sum, inv) => sum + Math.max(0, inv.totalAmount - inv.paidAmount),
+    0
+  );
 
   const pendingCount = invoices.filter((i) => i.status === "PENDING").length;
   const approvedCount = invoices.filter((i) => i.status === "APPROVED").length;
 
-  // Daily, Weekly, Monthly quantity
+  // Daily, Weekly, Monthly quantity calculations (BST UTC+6)
   const now = new Date();
   const bstTime = new Date(now.getTime() + 6 * 3600 * 1000);
   const y = bstTime.getUTCFullYear();
@@ -67,16 +82,28 @@ export default async function ClientDashboard() {
   const weekStart = new Date(todayStart.getTime() - 7 * 24 * 3600 * 1000);
   const monthStart = new Date(Date.UTC(y, m, 1, 0, 0, 0) - 6 * 3600 * 1000);
 
-  let dailyPcs = 0;
-  let weeklyPcs = 0;
-  let monthlyPcs = 0;
+  let dailyIn = 0;
+  let dailyOut = 0;
+  let weeklyIn = 0;
+  let weeklyOut = 0;
+  let monthlyIn = 0;
+  let monthlyOut = 0;
 
   invoices.forEach((inv) => {
     const invDate = new Date(inv.date);
     const pcs = inv.items.reduce((sum, it) => sum + it.quantity, 0);
-    if (invDate >= todayStart) dailyPcs += pcs;
-    if (invDate >= weekStart) weeklyPcs += pcs;
-    if (invDate >= monthStart) monthlyPcs += pcs;
+    if (invDate >= todayStart) {
+      if (inv.type === "product_in") dailyIn += pcs;
+      else dailyOut += pcs;
+    }
+    if (invDate >= weekStart) {
+      if (inv.type === "product_in") weeklyIn += pcs;
+      else weeklyOut += pcs;
+    }
+    if (invDate >= monthStart) {
+      if (inv.type === "product_in") monthlyIn += pcs;
+      else monthlyOut += pcs;
+    }
   });
 
   return (
@@ -86,9 +113,12 @@ export default async function ClientDashboard() {
       currentDue={currentDue}
       pendingCount={pendingCount}
       approvedCount={approvedCount}
-      dailyPcs={dailyPcs}
-      weeklyPcs={weeklyPcs}
-      monthlyPcs={monthlyPcs}
+      dailyIn={dailyIn}
+      dailyOut={dailyOut}
+      weeklyIn={weeklyIn}
+      weeklyOut={weeklyOut}
+      monthlyIn={monthlyIn}
+      monthlyOut={monthlyOut}
       invoices={invoices}
     />
   );
