@@ -1,0 +1,582 @@
+{
+  "timestamp": "2026-09-03T04:28:40.871Z",
+  "clients": [
+    {
+      "id": "cmtkneuob0001k0jknvltker1",
+      "type": "supplier",
+      "name": "Samad Tredras",
+      "phone": "01676583265",
+      "address": "Munshe Para",
+      "openingBalance": 1900,
+      "createdAt": "2026-09-02T22:09:05.258Z",
+      "updatedAt": "2026-09-02T23:40:38.975Z"
+    },
+    {
+      "id": "cmtkndo3r0000k0jk7dgi0n92",
+      "type": "supplier",
+      "name": "Blue moon ",
+      "phone": "01717146699",
+      "address": "Golahat",
+      "openingBalance": -16960,
+      "createdAt": "2026-09-02T22:08:10.088Z",
+      "updatedAt": "2026-09-03T00:51:52.075Z"
+    },
+    {
+      "id": "cmtknkttn00008r4q6u0vtohr",
+      "type": "supplier",
+      "name": "Alpha Exim",
+      "phone": "01701830968",
+      "address": "Uttara Dhaka",
+      "openingBalance": -23000,
+      "createdAt": "2026-09-02T22:13:43.004Z",
+      "updatedAt": "2026-09-03T03:09:56.525Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "cmtko0d1d0001fzij9sgimxhj",
+      "name": "MDF, Plywood",
+      "sku": null,
+      "stock": -20,
+      "buyPrice": 0,
+      "sellPrice": 250,
+      "createdAt": "2026-09-02T22:25:49.057Z",
+      "updatedAt": "2026-09-02T22:25:49.512Z"
+    },
+    {
+      "id": "cmtknltzg0003k0jk26sfwjd5",
+      "name": "MDF",
+      "sku": null,
+      "stock": 237,
+      "buyPrice": 180,
+      "sellPrice": 0,
+      "createdAt": "2026-09-02T22:14:31.180Z",
+      "updatedAt": "2026-09-03T00:51:50.220Z"
+    },
+    {
+      "id": "cmtkxeb1f00014oaefire1r6w",
+      "name": "MDF, Plywood (পিস (Pieces))",
+      "sku": null,
+      "stock": 50,
+      "buyPrice": 180,
+      "sellPrice": 0,
+      "createdAt": "2026-09-03T02:48:36.195Z",
+      "updatedAt": "2026-09-03T03:09:56.054Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "cmtknlune0005k0jktj5uqxjt",
+      "type": "product_in",
+      "date": "2026-09-02T22:14:32.043Z",
+      "clientId": "cmtkndo3r0000k0jk7dgi0n92",
+      "totalAmount": 10000,
+      "paidAmount": 2000,
+      "paymentStatus": "partial",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "dueDate": null,
+      "paymentMethod": null,
+      "createdAt": "2026-09-02T22:14:32.043Z"
+    },
+    {
+      "id": "cmtkqokg7000210waev9zmzei",
+      "type": "product_in",
+      "date": "2026-09-02T23:40:37.640Z",
+      "clientId": "cmtkneuob0001k0jknvltker1",
+      "totalAmount": 2700,
+      "paidAmount": 1100,
+      "paymentStatus": "partial",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "dueDate": "2026-09-30T00:00:00.000Z",
+      "paymentMethod": null,
+      "createdAt": "2026-09-02T23:40:37.640Z"
+    },
+    {
+      "id": "cmtkrwjk30002jxy5lcj48sdj",
+      "type": "product_in",
+      "date": "2026-09-03T00:14:49.348Z",
+      "clientId": "cmtknkttn00008r4q6u0vtohr",
+      "totalAmount": 18000,
+      "paidAmount": 5000,
+      "paymentStatus": "partial",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "dueDate": "2026-10-15T00:00:00.000Z",
+      "paymentMethod": null,
+      "createdAt": "2026-09-03T00:14:49.348Z"
+    },
+    {
+      "id": "cmtkt85k300026vhj9hq3luz6",
+      "type": "product_in",
+      "date": "2026-09-03T00:51:50.692Z",
+      "clientId": "cmtkndo3r0000k0jk7dgi0n92",
+      "totalAmount": 12960,
+      "paidAmount": 4000,
+      "paymentStatus": "partial",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "dueDate": "2026-09-20T00:00:00.000Z",
+      "paymentMethod": "mobile_banking",
+      "createdAt": "2026-09-03T00:51:50.692Z"
+    },
+    {
+      "id": "cmtko0dqj0003fziju6q9695t",
+      "type": "product_out",
+      "date": "2026-09-02T22:25:49.963Z",
+      "clientId": "cmtknkttn00008r4q6u0vtohr",
+      "totalAmount": 5000,
+      "paidAmount": 5000,
+      "paymentStatus": "paid",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "dueDate": null,
+      "paymentMethod": null,
+      "createdAt": "2026-09-02T22:25:49.963Z"
+    },
+    {
+      "id": "cmtkxebdf00034oae2mzr9ets",
+      "type": "product_in",
+      "date": "2026-09-03T02:48:36.627Z",
+      "clientId": "cmtknkttn00008r4q6u0vtohr",
+      "totalAmount": 9000,
+      "paidAmount": 0,
+      "paymentStatus": "due",
+      "status": "APPROVED",
+      "requestedBy": "Alpha Exim",
+      "dueDate": "2026-09-23T00:00:00.000Z",
+      "paymentMethod": null,
+      "createdAt": "2026-09-03T02:48:36.627Z"
+    }
+  ],
+  "invoiceItems": [
+    {
+      "id": "cmtknlune0007k0jkjcfygu1j",
+      "invoiceId": "cmtknlune0005k0jktj5uqxjt",
+      "productId": "cmtknltzg0003k0jk26sfwjd5",
+      "quantity": 50,
+      "pricePerUnit": 200,
+      "total": 10000
+    },
+    {
+      "id": "cmtko0dqj0005fzijwjddzr8j",
+      "invoiceId": "cmtko0dqj0003fziju6q9695t",
+      "productId": "cmtko0d1d0001fzij9sgimxhj",
+      "quantity": 20,
+      "pricePerUnit": 250,
+      "total": 5000
+    },
+    {
+      "id": "cmtkqokg8000410waxwskml8j",
+      "invoiceId": "cmtkqokg7000210waev9zmzei",
+      "productId": "cmtknltzg0003k0jk26sfwjd5",
+      "quantity": 15,
+      "pricePerUnit": 180,
+      "total": 2700
+    },
+    {
+      "id": "cmtkrwjk30004jxy5v57v0970",
+      "invoiceId": "cmtkrwjk30002jxy5lcj48sdj",
+      "productId": "cmtknltzg0003k0jk26sfwjd5",
+      "quantity": 100,
+      "pricePerUnit": 180,
+      "total": 18000
+    },
+    {
+      "id": "cmtkt85k300046vhj5dioaybv",
+      "invoiceId": "cmtkt85k300026vhj9hq3luz6",
+      "productId": "cmtknltzg0003k0jk26sfwjd5",
+      "quantity": 72,
+      "pricePerUnit": 180,
+      "total": 12960
+    },
+    {
+      "id": "cmtkxebdf00054oaecyigaewl",
+      "invoiceId": "cmtkxebdf00034oae2mzr9ets",
+      "productId": "cmtkxeb1f00014oaefire1r6w",
+      "quantity": 50,
+      "pricePerUnit": 180,
+      "total": 9000
+    }
+  ],
+  "transactions": [
+    {
+      "id": "cmtkmxhid0000ulzwev7r2hyv",
+      "date": "2026-09-02T21:55:35.269Z",
+      "type": "in",
+      "amount": 100000,
+      "description": "Test Main Muldhon",
+      "status": "APPROVED",
+      "requestedBy": null,
+      "clientId": null,
+      "invoiceId": null,
+      "createdAt": "2026-09-02T21:55:35.269Z"
+    },
+    {
+      "id": "cmtknap0q0000mtm2d0iov6cm",
+      "date": "2026-09-02T22:05:51.528Z",
+      "type": "in",
+      "amount": 10000,
+      "description": "From Sunny",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": null,
+      "invoiceId": null,
+      "createdAt": "2026-09-02T22:05:51.528Z"
+    },
+    {
+      "id": "cmtknb0gw0003mtm2pkyoftpu",
+      "date": "2026-09-02T22:06:06.369Z",
+      "type": "out",
+      "amount": 1000,
+      "description": "Samad",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": null,
+      "invoiceId": null,
+      "createdAt": "2026-09-02T22:06:06.369Z"
+    },
+    {
+      "id": "cmtknlvyo0009k0jku7wbtlev",
+      "date": "2026-09-02T22:14:33.744Z",
+      "type": "out",
+      "amount": 2000,
+      "description": "Payment for Invoice #cmtknlun",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": "cmtkndo3r0000k0jk7dgi0n92",
+      "invoiceId": "cmtknlune0005k0jktj5uqxjt",
+      "createdAt": "2026-09-02T22:14:33.744Z"
+    },
+    {
+      "id": "cmtko0ert0007fzijiu9jyncv",
+      "date": "2026-09-02T22:25:51.306Z",
+      "type": "in",
+      "amount": 5000,
+      "description": "Payment for Invoice #cmtko0dq",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": "cmtknkttn00008r4q6u0vtohr",
+      "invoiceId": "cmtko0dqj0003fziju6q9695t",
+      "createdAt": "2026-09-02T22:25:51.306Z"
+    },
+    {
+      "id": "cmtko2x5q000cfzijz9zu4f09",
+      "date": "2026-09-02T22:27:48.447Z",
+      "type": "out",
+      "amount": 150,
+      "description": "[Expense] Tea & Snacks: Sunny vai ar jono",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": null,
+      "invoiceId": null,
+      "createdAt": "2026-09-02T22:27:48.447Z"
+    },
+    {
+      "id": "cmtko5fhj0002dnty18nc8txe",
+      "date": "2026-09-02T22:29:45.512Z",
+      "type": "out",
+      "amount": 200,
+      "description": "[Expense] Owner Personal: bike oil",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": null,
+      "invoiceId": null,
+      "createdAt": "2026-09-02T22:29:45.512Z"
+    },
+    {
+      "id": "cmtkocb1y0007dntyucoufcvc",
+      "date": "2026-09-02T22:35:06.359Z",
+      "type": "out",
+      "amount": 200,
+      "description": "[Expense] Owner Personal: Bike ar Oil",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": null,
+      "invoiceId": null,
+      "createdAt": "2026-09-02T22:35:06.359Z"
+    },
+    {
+      "id": "cmtkouyew000414chsoo4490k",
+      "date": "2026-09-02T22:49:36.218Z",
+      "type": "in",
+      "amount": 10000,
+      "description": "Ashraf Mama",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": null,
+      "invoiceId": null,
+      "createdAt": "2026-09-02T22:49:36.218Z"
+    },
+    {
+      "id": "cmtkqolto000610washuskswo",
+      "date": "2026-09-02T23:40:39.421Z",
+      "type": "out",
+      "amount": 1100,
+      "description": "Payment for Invoice #cmtkqokg",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": "cmtkneuob0001k0jknvltker1",
+      "invoiceId": "cmtkqokg7000210waev9zmzei",
+      "createdAt": "2026-09-02T23:40:39.421Z"
+    },
+    {
+      "id": "cmtkqrw52000b10wauvyhnvf7",
+      "date": "2026-09-02T23:43:12.759Z",
+      "type": "out",
+      "amount": 300,
+      "description": "[খরচ - নগদ] Daily Labor: Majadul",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": null,
+      "invoiceId": null,
+      "createdAt": "2026-09-02T23:43:12.759Z"
+    },
+    {
+      "id": "cmtkrwlb30006jxy5zgiv76g9",
+      "date": "2026-09-03T00:14:51.615Z",
+      "type": "out",
+      "amount": 5000,
+      "description": "পণ্য ইন (মহাজন: Alpha Exim)",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": "cmtknkttn00008r4q6u0vtohr",
+      "invoiceId": "cmtkrwjk30002jxy5lcj48sdj",
+      "createdAt": "2026-09-03T00:14:51.615Z"
+    },
+    {
+      "id": "cmtkt87c200066vhjw2s2dlu9",
+      "date": "2026-09-03T00:51:52.994Z",
+      "type": "out",
+      "amount": 4000,
+      "description": "[মোবাইল ব্যাংকিং] পণ্য ইন (মহাজন: Blue moon )",
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "clientId": "cmtkndo3r0000k0jk7dgi0n92",
+      "invoiceId": "cmtkt85k300026vhj9hq3luz6",
+      "createdAt": "2026-09-03T00:51:52.994Z"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "cmtko2vrg000afzijs5vua8ea",
+      "date": "2026-09-02T22:27:46.411Z",
+      "categoryId": "cmtkltk5n0003tu8lssgw0o22",
+      "employeeId": null,
+      "paidTo": null,
+      "amount": 150,
+      "description": "Sunny vai ar jono",
+      "paymentMethod": "cash",
+      "isPersonal": false,
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "createdAt": "2026-09-02T22:27:46.411Z",
+      "transactionId": null
+    },
+    {
+      "id": "cmtkoc9ou0005dntyqw84voey",
+      "date": "2026-09-02T22:35:03.262Z",
+      "categoryId": "cmtko5dsg0001dnty5ch7vqzm",
+      "employeeId": null,
+      "paidTo": null,
+      "amount": 200,
+      "description": "Bike ar Oil",
+      "paymentMethod": "cash",
+      "isPersonal": true,
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "createdAt": "2026-09-02T22:35:03.262Z",
+      "transactionId": null
+    },
+    {
+      "id": "cmtkoqvnn000014ch037k62de",
+      "date": "2026-09-02T22:46:26.030Z",
+      "categoryId": "cmtko5dsg0001dnty5ch7vqzm",
+      "employeeId": null,
+      "paidTo": null,
+      "amount": 1000,
+      "description": "bazer sodai",
+      "paymentMethod": "other_source",
+      "isPersonal": true,
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "createdAt": "2026-09-02T22:46:26.030Z",
+      "transactionId": null
+    },
+    {
+      "id": "cmtkqrueg000910waontzhn60",
+      "date": "2026-09-02T23:43:10.281Z",
+      "categoryId": "cmtkqrueh000a10wa45s8p8l6",
+      "employeeId": null,
+      "paidTo": null,
+      "amount": 300,
+      "description": "Majadul",
+      "paymentMethod": "cash",
+      "isPersonal": false,
+      "status": "APPROVED",
+      "requestedBy": "owner",
+      "createdAt": "2026-09-02T23:43:10.281Z",
+      "transactionId": "cmtkqrw52000b10wauvyhnvf7"
+    }
+  ],
+  "users": [
+    {
+      "id": "cmtkltii20000tu8l64plcmoh",
+      "username": "owner",
+      "password": "123",
+      "role": "OWNER",
+      "clientId": null,
+      "employeeId": null,
+      "createdAt": "2026-09-02T21:24:30.314Z"
+    },
+    {
+      "id": "cmtkltj210001tu8l414n7646",
+      "username": "manager",
+      "password": "123",
+      "role": "MANAGER",
+      "clientId": null,
+      "employeeId": null,
+      "createdAt": "2026-09-02T21:24:31.034Z"
+    },
+    {
+      "id": "cmtkw9wsr000149hwcbqt4b33",
+      "username": "01701830968",
+      "password": "123456",
+      "role": "CLIENT",
+      "clientId": "cmtknkttn00008r4q6u0vtohr",
+      "employeeId": null,
+      "createdAt": "2026-09-03T02:17:11.499Z"
+    },
+    {
+      "id": "cmtl0979b0000132eaopuwtgb",
+      "username": "kayes147@",
+      "password": "147570pmBD@147",
+      "role": "SUPER_ADMIN",
+      "clientId": null,
+      "employeeId": null,
+      "createdAt": "2026-09-03T04:08:36.863Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "cmtkm295600092s4s6sjep87a",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "CLEAN_SLATE_RESET",
+      "details": "Database cleaned for fresh testing. All past products, invoices, loans, and cash records reset.",
+      "createdAt": "2026-09-02T21:31:18.091Z"
+    },
+    {
+      "id": "cmtknaps40002mtm2fv9xr3ns",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "ADD_TRANSACTION",
+      "details": "Added Cash In of ৳10,000 - \"From Sunny\"",
+      "createdAt": "2026-09-02T22:05:52.517Z"
+    },
+    {
+      "id": "cmtknb10h0005mtm2tgtd0rz7",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "ADD_TRANSACTION",
+      "details": "Added Cash Out of ৳1,000 - \"Samad\"",
+      "createdAt": "2026-09-02T22:06:07.073Z"
+    },
+    {
+      "id": "cmtknlws6000bk0jk6c5i2bnr",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "CREATE_INVOICE_IN",
+      "details": "Created Product In Invoice #cmtknlun for ৳10,000 (APPROVED)",
+      "createdAt": "2026-09-02T22:14:34.807Z"
+    },
+    {
+      "id": "cmtko0fmx0009fzijkgktpg26",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "CREATE_INVOICE_OUT",
+      "details": "Created Product Out Invoice #cmtko0dq for ৳5,000 (APPROVED)",
+      "createdAt": "2026-09-02T22:25:52.426Z"
+    },
+    {
+      "id": "cmtko2xuv000efzij1op48bek",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "ADD_EXPENSE",
+      "details": "Added Business expense of ৳150 in 'Tea & Snacks' (APPROVED)",
+      "createdAt": "2026-09-02T22:27:49.351Z"
+    },
+    {
+      "id": "cmtko5g6m0004dntytzifx0hj",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "ADD_EXPENSE",
+      "details": "Added Personal expense of ৳200 in 'Owner Personal' (APPROVED)",
+      "createdAt": "2026-09-02T22:29:46.414Z"
+    },
+    {
+      "id": "cmtkocbq40009dnty90c6rzoz",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "ADD_EXPENSE",
+      "details": "Added Personal expense of ৳200 in 'Owner Personal' (APPROVED)",
+      "createdAt": "2026-09-02T22:35:07.228Z"
+    },
+    {
+      "id": "cmtkoqxbn000314ch2vlk8rf8",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "ADD_EXPENSE",
+      "details": "Added Personal expense of ৳1,000 in 'Owner Personal' (APPROVED, Source: ব্যক্তিগত/অন্যান্য তহবিল)",
+      "createdAt": "2026-09-02T22:46:28.404Z"
+    },
+    {
+      "id": "cmtkouz3r000614cheqrbl4fk",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "ADD_TRANSACTION",
+      "details": "Added Cash In of ৳10,000 - \"Ashraf Mama\"",
+      "createdAt": "2026-09-02T22:49:37.335Z"
+    },
+    {
+      "id": "cmtkqomph000810wawhl8o877",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "CREATE_INVOICE_IN",
+      "details": "Created Product In Invoice #cmtkqokg for ৳2,700 (APPROVED)",
+      "createdAt": "2026-09-02T23:40:40.565Z"
+    },
+    {
+      "id": "cmtkqry1s000d10wauid7uem7",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "ADD_EXPENSE",
+      "details": "Added Business expense of ৳300 in 'Daily Labor' (APPROVED, Method: cash)",
+      "createdAt": "2026-09-02T23:43:15.232Z"
+    },
+    {
+      "id": "cmtkrwm7s0008jxy517me8oow",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "CREATE_INVOICE_IN",
+      "details": "Created Product In Invoice #cmtkrwjk for ৳18,000 (APPROVED)",
+      "createdAt": "2026-09-03T00:14:52.793Z"
+    },
+    {
+      "id": "cmtkt889300086vhjseopngfb",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "CREATE_INVOICE_IN",
+      "details": "Created Product In Invoice #cmtkt85k for ৳12,960 (APPROVED)",
+      "createdAt": "2026-09-03T00:51:54.184Z"
+    },
+    {
+      "id": "cmtkxed7300074oaegycjo1aw",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "CREATE_INVOICE_IN",
+      "details": "Created Product In Invoice #cmtkxebd for ৳9,000 (PENDING)",
+      "createdAt": "2026-09-03T02:48:38.991Z"
+    },
+    {
+      "id": "cmtky5ruq0002244km1wqvq9v",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "APPROVE_INVOICE",
+      "details": "Approved Product In Invoice #cmtkxebd for ৳9,000",
+      "createdAt": "2026-09-03T03:09:57.699Z"
+    },
+    {
+      "id": "cmtkz7zux0001t3c6wbycbfcm",
+      "userId": "cmtkltii20000tu8l64plcmoh",
+      "action": "TAGADA_REMINDER",
+      "details": "বকেয়া তাগাদা পাঠানো হয়েছে: Alpha Exim-কে ৳9,000 বকেয়ার জন্য (WhatsApp, Invoice #cmtkxebd)",
+      "createdAt": "2026-09-03T03:39:41.001Z"
+    }
+  ]
+}

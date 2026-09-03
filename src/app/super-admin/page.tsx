@@ -19,7 +19,9 @@ export default async function SuperAdminPage() {
 
   const isSuperAdmin =
     userRole === "SUPER_ADMIN" ||
+    userRole === "OWNER" ||
     userName.includes("kayes147") ||
+    userName === "owner" ||
     userName === "super admin (kayes)";
 
   // If not authenticated as Super Admin, present the SuperAdmin Security Gate

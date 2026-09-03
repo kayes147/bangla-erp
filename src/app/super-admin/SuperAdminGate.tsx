@@ -30,7 +30,7 @@ export default function SuperAdminGate() {
       if (res?.error) {
         setError("ভুল সুপার অ্যাডমিন আইডি বা পাসওয়ার্ড! অনুগ্রহ করে সঠিক তথ্য দিন।");
       } else {
-        router.refresh();
+        window.location.href = "/super-admin";
       }
     } catch (err: any) {
       setError("লগইন করতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।");

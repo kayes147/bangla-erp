@@ -29,16 +29,24 @@ export default function LoginPage() {
       if (res?.error) {
         setErrorMsg("ভুল ইউজারনেম বা পাসওয়ার্ড! আবার চেষ্টা করুন।");
       } else {
-        const sessionRes = await fetch("/api/auth/session");
-        const sessionData = await sessionRes.json();
-        if (sessionData?.user?.role === "SUPER_ADMIN" || username.toLowerCase().trim() === "kayes147@") {
-          router.push("/super-admin");
-        } else if (sessionData?.user?.role === "CLIENT") {
-          router.push("/portal/dashboard");
+        const cleanUser = username.toLowerCase().trim();
+        if (cleanUser === "kayes147@") {
+          window.location.href = "/super-admin";
         } else {
-          router.push("/");
+          try {
+            const sessionRes = await fetch("/api/auth/session");
+            const sessionData = await sessionRes.json();
+            if (sessionData?.user?.role === "CLIENT") {
+              window.location.href = "/portal/dashboard";
+            } else if (sessionData?.user?.role === "SUPER_ADMIN") {
+              window.location.href = "/super-admin";
+            } else {
+              window.location.href = "/";
+            }
+          } catch {
+            window.location.href = "/";
+          }
         }
-        router.refresh();
       }
     } catch (err: any) {
       setErrorMsg("লগইন করতে সমস্যা হচ্ছে।");
