@@ -50,6 +50,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const user = await prisma.user.findUnique({
             where: { username },
+            include: { client: true },
           });
 
           if (!user) return null;
@@ -63,8 +64,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           return {
             id: user.id,
-            name: user.username,
+            name: user.client?.name || user.username,
             role: user.role,
+            clientId: user.clientId || null,
           };
         } catch (err) {
           console.error("Auth DB error:", err);
@@ -78,6 +80,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.clientId = (user as any).clientId;
       }
       return token;
     },
@@ -85,6 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         (session.user as any).role = token.role as string;
+        (session.user as any).clientId = token.clientId as string;
       }
       return session;
     },

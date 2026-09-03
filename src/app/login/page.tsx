@@ -29,7 +29,13 @@ export default function LoginPage() {
       if (res?.error) {
         setErrorMsg("ভুল ইউজারনেম বা পাসওয়ার্ড! আবার চেষ্টা করুন।");
       } else {
-        router.push("/");
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
+        if (sessionData?.user?.role === "CLIENT") {
+          router.push("/portal/dashboard");
+        } else {
+          router.push("/");
+        }
         router.refresh();
       }
     } catch (err: any) {

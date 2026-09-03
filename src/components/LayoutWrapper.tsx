@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Sidebar from "./Sidebar";
 import ClientSidebar from "./ClientSidebar";
 import TopNav from "./TopNav";
@@ -12,6 +13,8 @@ export default function LayoutWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Automatically close mobile menu when user changes page/route
@@ -27,7 +30,17 @@ export default function LayoutWrapper({
     pathname === "/select-company";
   
   const isSuperAdmin = pathname.startsWith("/super-admin");
-  const isClientPortal = pathname.startsWith("/portal") && !isAuthPage;
+  const userRole = (session?.user as any)?.role;
+  const isClient = userRole === "CLIENT";
+
+  // If logged in as client and visiting an owner page, redirect to portal dashboard
+  useEffect(() => {
+    if (isClient && !pathname.startsWith("/portal") && !isAuthPage && !isSuperAdmin) {
+      router.push("/portal/dashboard");
+    }
+  }, [isClient, pathname, isAuthPage, isSuperAdmin, router]);
+
+  const isClientPortal = (isClient || pathname.startsWith("/portal")) && !isAuthPage;
 
   if (isAuthPage || isSuperAdmin) {
     return (
@@ -41,7 +54,10 @@ export default function LayoutWrapper({
     <div className="flex h-screen h-[100dvh] w-full overflow-hidden bg-gray-50">
       {/* Sidebar: Fixed on desktop (md:), Slide-over off-canvas drawer on mobile */}
       {isClientPortal ? (
-        <ClientSidebar />
+        <ClientSidebar 
+          mobileOpen={mobileMenuOpen} 
+          onClose={() => setMobileMenuOpen(false)} 
+        />
       ) : (
         <Sidebar 
           mobileOpen={mobileMenuOpen} 
