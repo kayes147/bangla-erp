@@ -85,10 +85,10 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm font-bold text-gray-700">
-                  মহাজন / সাপ্লায়ার <span className="text-[10px] font-normal text-gray-400 uppercase">(Supplier / Party)</span> <span className="text-red-500">*</span>
+                  মহাজন <span className="text-[10px] font-normal text-gray-400 uppercase">(Mahajon)</span> <span className="text-red-500">*</span>
                 </label>
                 <Link href="/clients/new" className="text-xs font-bold text-emerald-600 hover:underline">
-                  + নতুন মহাজন / কাস্টমার
+                  + নতুন মহাজন
                 </Link>
               </div>
               <select 
@@ -100,7 +100,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
                 <option value="">মহাজন সিলেক্ট করুন...</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>
-                    {c.name} ({c.type === "supplier" ? "মহাজন" : "কাস্টমার"} • {c.phone})
+                    {c.name} {c.phone ? `(${c.phone})` : ""}
                   </option>
                 ))}
               </select>

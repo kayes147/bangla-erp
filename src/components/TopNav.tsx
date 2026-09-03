@@ -22,7 +22,7 @@ export default function TopNav() {
     if (pathname.startsWith("/main-cash")) return { bn: "মূল ক্যাশ", en: "Main Cash" };
     if (pathname.startsWith("/expenses")) return { bn: "দৈনিক খরচ", en: "Daily Expense" };
     if (pathname.startsWith("/loan")) return { bn: "বকেয়ার হিসাব", en: "Business Due" };
-    if (pathname.startsWith("/clients")) return { bn: "মহাজন ও কাস্টমার", en: "Suppliers & Customers" };
+    if (pathname.startsWith("/clients")) return { bn: "মহাজন", en: "Mahajon" };
     if (pathname.startsWith("/salary") || pathname.startsWith("/hr")) return { bn: "কর্মী", en: "Employees" };
     if (pathname.startsWith("/approvals")) return { bn: "অনুমোদন তালিকা", en: "Approvals" };
     if (pathname.startsWith("/audit-logs")) return { bn: "অডিট লগ", en: "Audit Logs" };

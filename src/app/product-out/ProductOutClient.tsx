@@ -73,10 +73,10 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm font-bold text-gray-700">
-                  কাস্টমার / গ্রাহক <span className="text-[10px] font-normal text-gray-400 uppercase">(Customer / Party)</span> <span className="text-red-500">*</span>
+                  মহাজন <span className="text-[10px] font-normal text-gray-400 uppercase">(Mahajon)</span> <span className="text-red-500">*</span>
                 </label>
                 <Link href="/clients/new" className="text-xs font-bold text-blue-600 hover:underline">
-                  + নতুন কাস্টমার / মহাজন
+                  + নতুন মহাজন
                 </Link>
               </div>
               <select 
@@ -85,10 +85,10 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
                 className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 required
               >
-                <option value="">কাস্টমার বা মহাজন সিলেক্ট করুন...</option>
+                <option value="">মহাজন সিলেক্ট করুন...</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>
-                    {c.name} ({c.type === "customer" ? "কাস্টমার" : "মহাজন"} • {c.phone})
+                    {c.name} {c.phone ? `(${c.phone})` : ""}
                   </option>
                 ))}
               </select>
