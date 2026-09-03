@@ -9,8 +9,10 @@ import BengaliClock from "./BengaliClock";
 
 export default function TopNav({
   onToggleMobileMenu,
+  hasNotifications = false,
 }: {
   onToggleMobileMenu?: () => void;
+  hasNotifications?: boolean;
 }) {
   const { data: session } = useSession();
   const pathname = usePathname();
@@ -32,6 +34,9 @@ export default function TopNav({
     if (pathname.startsWith("/approvals")) return { bn: "অনুমোদন তালিকা", en: "Approvals" };
     if (pathname.startsWith("/audit-logs")) return { bn: "অডিট লগ", en: "Audit Logs" };
     if (pathname.startsWith("/notifications")) return { bn: "নোটিফিকেশন", en: "Notifications" };
+    if (pathname.startsWith("/portal/dashboard")) return { bn: "মহাজন ড্যাশবোর্ড", en: "Dashboard" };
+    if (pathname.startsWith("/portal/product-in")) return { bn: "প্রাপ্ত পণ্য", en: "Received" };
+    if (pathname.startsWith("/portal/product-out")) return { bn: "পণ্য আউট ফর্ম", en: "Send Request" };
     return { bn: "বাংলা ইআরপি", en: "Bangla ERP" };
   };
 
@@ -76,8 +81,10 @@ export default function TopNav({
           title="নোটিফিকেশন দেখুন"
         >
           <Bell size={18} />
-          {/* Notification Red Pulse Dot */}
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white animate-pulse" />
+          {/* Notification Red Pulse Dot - Only shown when there are notifications */}
+          {hasNotifications && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white animate-pulse" />
+          )}
         </Link>
 
         {/* User Profile & Dropdown */}

@@ -18,15 +18,18 @@ import {
   MessageSquare,
   Mail,
   X,
-  Bell
+  Bell,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function Sidebar({
   mobileOpen = false,
   onClose = () => {},
+  pendingApprovalsCount = 0,
 }: {
   mobileOpen?: boolean;
   onClose?: () => void;
+  pendingApprovalsCount?: number;
 }) {
   const pathname = usePathname();
   const [isHrOpen, setIsHrOpen] = useState(false);
@@ -133,17 +136,38 @@ export default function Sidebar({
           {/* --- OWNER ONLY SECTION --- */}
           <div className="pt-4 mt-4 border-t border-slate-700">
             <p className="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">মালিকের নিয়ন্ত্রণ <span className="text-[8px] block mt-0.5">(Owner Controls)</span></p>
+            {/* Approvals Link: Highlighted with ping animation if pending > 0, normal if 0 */}
             <Link 
               href="/approvals" 
               prefetch={false} 
               onClick={onClose}
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors text-orange-400"
+              className={`flex items-center space-x-3 p-3 rounded-lg transition-all ${
+                pendingApprovalsCount > 0
+                  ? "bg-orange-950/40 text-orange-400 border border-orange-800/50 shadow-xs"
+                  : pathname.startsWith('/approvals')
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
             >
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+              {pendingApprovalsCount > 0 ? (
+                <span className="relative flex h-3 w-3 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                </span>
+              ) : (
+                <ShieldCheck size={18} className="text-slate-400 shrink-0" />
+              )}
+              <span>
+                অ্যাপ্রুভাল{" "}
+                <span className={`text-[10px] font-normal block mt-0.5 ${pendingApprovalsCount > 0 ? "text-orange-300" : "text-slate-400"}`}>
+                  (Approvals)
+                </span>
               </span>
-              <span>অ্যাপ্রুভাল <span className="text-[10px] font-normal text-orange-300 block mt-0.5">(Approvals)</span></span>
+              {pendingApprovalsCount > 0 && (
+                <span className="ml-auto px-2 py-0.5 bg-orange-500 text-black text-[10px] font-black rounded-full shadow-xs">
+                  {pendingApprovalsCount}
+                </span>
+              )}
             </Link>
             <Link 
               href="/audit-logs" 

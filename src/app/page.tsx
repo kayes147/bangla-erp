@@ -9,7 +9,10 @@ import {
   PackageMinus,
   Boxes,
   ArrowDownToLine,
-  ArrowUpFromLine
+  ArrowUpFromLine,
+  CheckCircle2,
+  ArrowRight,
+  Clock
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
@@ -51,6 +54,7 @@ export default async function Home() {
   let overallTotalOut = 0;
   let overallCurrentStock = 0;
   let totalPending = 0;
+  let pendingData: { invoices: any[]; expenses: any[]; transactions: any[] } = { invoices: [], expenses: [], transactions: [] };
 
   try {
     // 1. Calculate Main Cash and get all transactions sorted newest first
@@ -159,6 +163,7 @@ export default async function Home() {
 
     // 8. Approvals
     const pending = await getPendingApprovals();
+    pendingData = pending;
     totalPending = (pending.invoices?.length || 0) + (pending.expenses?.length || 0) + (pending.transactions?.length || 0);
   } catch (err) {
     console.error("Dashboard data fetch error:", err);
@@ -454,24 +459,159 @@ export default async function Home() {
       </div>
 
       {/* Approvals Section */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mt-6">
-        <div className="p-4 border-b border-gray-100 bg-orange-50/50 flex justify-between items-center">
-          <h2 className="font-bold text-gray-800 flex items-center">
-            <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
-            অ্যাপ্রুভাল রিকোয়েস্ট <span className="text-xs font-normal text-gray-500 ml-1">(Pending Approvals)</span>
-          </h2>
-          <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded-full">{totalPending} Pending</span>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-6">
+        <div className="p-4 sm:p-5 border-b border-gray-100 bg-orange-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5">
+            <span className="relative flex h-3 w-3 shrink-0">
+              {totalPending > 0 && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${totalPending > 0 ? "bg-orange-500" : "bg-emerald-500"}`}></span>
+            </span>
+            <h2 className="font-extrabold text-gray-900 text-base">
+              অ্যাপ্রুভাল রিকোয়েস্ট <span className="text-xs font-normal text-gray-500 ml-1">(Pending Approvals)</span>
+            </h2>
+            <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full ${totalPending > 0 ? "bg-orange-100 text-orange-700" : "bg-emerald-100 text-emerald-800"}`}>
+              {totalPending} টি অপেক্ষমাণ
+            </span>
+          </div>
+
+          <Link
+            href="/approvals"
+            prefetch={false}
+            className="inline-flex items-center space-x-1 text-xs font-bold text-orange-600 hover:text-orange-800 hover:underline"
+          >
+            <span>সম্পূর্ণ অনুমোদন বোর্ড খুলুন</span>
+            <ArrowRight size={14} />
+          </Link>
         </div>
-        <div className="p-6">
+
+        <div className="p-0">
           {totalPending > 0 ? (
-            <div className="flex flex-col items-center justify-center space-y-3">
-              <p className="text-sm text-gray-600 font-medium">You have <span className="font-bold text-orange-600">{totalPending}</span> requests waiting for your approval.</p>
-              <Link href="/approvals" prefetch={false} className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition-colors">
-                View & Approve Requests
-              </Link>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-700">
+                <thead className="bg-gray-50/80 border-b border-gray-100">
+                  <tr>
+                    <th className="p-4 font-bold text-gray-800">চালান নং <span className="text-[10px] font-normal text-gray-400 block uppercase">(ID)</span></th>
+                    <th className="p-4 font-bold text-gray-800">মহাজন / আবেদনকারী <span className="text-[10px] font-normal text-gray-400 block uppercase">(Requester)</span></th>
+                    <th className="p-4 font-bold text-gray-800">পণ্যের বিবরণ ও পরিমাণ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Product & Qty)</span></th>
+                    <th className="p-4 font-bold text-gray-800">রিকোয়েস্টের ধরন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Type)</span></th>
+                    <th className="p-4 font-bold text-gray-800">মোট টাকা <span className="text-[10px] font-normal text-gray-400 block uppercase">(Amount)</span></th>
+                    <th className="p-4 font-bold text-right text-gray-800">অ্যাকশন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Action)</span></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {/* Pending Invoices */}
+                  {pendingData.invoices?.map((inv: any) => {
+                    const requesterName = inv.client?.name || inv.requestedBy || "মহাজন";
+                    const displayId = `#${inv.id.slice(-6)}`;
+                    const itemsDesc = inv.items?.map((it: any) => {
+                      const pName = it.product?.name || it.productName || "পণ্য";
+                      return `${pName} (${it.quantity} Pcs)`;
+                    }).join(", ") || "পণ্য চালান";
+
+                    return (
+                      <tr key={inv.id} className="hover:bg-orange-50/30 transition-colors">
+                        <td className="p-4 font-mono font-bold text-gray-900">{displayId}</td>
+                        <td className="p-4">
+                          <p className="font-extrabold text-gray-950">{requesterName}</p>
+                          {inv.client?.phone && (
+                            <p className="text-xs text-gray-500 font-mono">{inv.client.phone}</p>
+                          )}
+                        </td>
+                        <td className="p-4 font-bold text-gray-900">{itemsDesc}</td>
+                        <td className="p-4">
+                          {inv.type === "product_in" ? (
+                            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">
+                              পণ্য ইন চালান
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold">
+                              পণ্য আউট চালান
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 font-extrabold text-gray-950">৳ {inv.totalAmount.toLocaleString()}</td>
+                        <td className="p-4 text-right">
+                          <Link
+                            href="/approvals"
+                            prefetch={false}
+                            className="inline-flex items-center space-x-1 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-sm transition-all"
+                          >
+                            <span>অনুমোদন করুন</span>
+                            <ArrowRight size={13} />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Pending Expenses */}
+                  {pendingData.expenses?.map((exp: any) => (
+                    <tr key={exp.id} className="hover:bg-orange-50/30 transition-colors">
+                      <td className="p-4 font-mono font-bold text-gray-900">#{exp.id.slice(-6)}</td>
+                      <td className="p-4">
+                        <p className="font-extrabold text-gray-950">{exp.employee?.name || exp.requestedBy || "ম্যানেজার"}</p>
+                        <p className="text-xs text-gray-500">দৈনিক খরচ</p>
+                      </td>
+                      <td className="p-4 font-bold text-gray-900">{exp.description || exp.category?.name || "দৈনিক খরচ"}</td>
+                      <td className="p-4">
+                        <span className="px-2.5 py-1 bg-red-100 text-red-800 rounded-lg text-xs font-bold">
+                          খরচ অনুমোদন
+                        </span>
+                      </td>
+                      <td className="p-4 font-extrabold text-gray-950">৳ {exp.amount.toLocaleString()}</td>
+                      <td className="p-4 text-right">
+                        <Link
+                          href="/approvals"
+                          prefetch={false}
+                          className="inline-flex items-center space-x-1 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-sm transition-all"
+                        >
+                          <span>অনুমোদন করুন</span>
+                          <ArrowRight size={13} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* Pending Transactions */}
+                  {pendingData.transactions?.map((trx: any) => (
+                    <tr key={trx.id} className="hover:bg-orange-50/30 transition-colors">
+                      <td className="p-4 font-mono font-bold text-gray-900">#{trx.id.slice(-6)}</td>
+                      <td className="p-4">
+                        <p className="font-extrabold text-gray-950">{trx.client?.name || "ম্যানেজার এন্ট্রি"}</p>
+                        <p className="text-xs text-gray-500">ক্যাশ লেনদেন</p>
+                      </td>
+                      <td className="p-4 font-bold text-gray-900">{trx.description}</td>
+                      <td className="p-4">
+                        <span className="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold">
+                          {trx.type === "in" ? "ক্যাশ ইন" : "ক্যাশ আউট"}
+                        </span>
+                      </td>
+                      <td className="p-4 font-extrabold text-gray-950">৳ {trx.amount.toLocaleString()}</td>
+                      <td className="p-4 text-right">
+                        <Link
+                          href="/approvals"
+                          prefetch={false}
+                          className="inline-flex items-center space-x-1 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-sm transition-all"
+                        >
+                          <span>অনুমোদন করুন</span>
+                          <ArrowRight size={13} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center italic">No pending requests at the moment.</p>
+            <div className="p-8 text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-2xs">
+                <CheckCircle2 size={24} />
+              </div>
+              <p className="text-sm font-extrabold text-gray-900">বর্তমানে কোনো পেন্ডিং রিকোয়েস্ট নেই</p>
+              <p className="text-xs text-gray-500">সকল পণ্য ইন, আউট ও খরচের অনুমোদন সম্পন্ন হয়েছে ✓</p>
+            </div>
           )}
         </div>
       </div>
