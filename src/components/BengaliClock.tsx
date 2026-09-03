@@ -91,9 +91,8 @@ export default function BengaliClock() {
       {/* Live Clock */}
       <div className="flex items-center space-x-1 text-[11px] sm:text-xs font-bold whitespace-nowrap">
         <Clock size={13} className="text-emerald-600 shrink-0" />
-        <span className="text-[10px] sm:text-[11px] text-emerald-700 font-semibold hidden md:inline">{period}</span>
         <span className="font-mono tracking-wide sm:tracking-wider text-gray-900 font-bold">
-          {formattedHours}:{formattedMinutes}:{formattedSeconds}
+          {formattedHours}:{formattedMinutes}
         </span>
       </div>
     </div>
