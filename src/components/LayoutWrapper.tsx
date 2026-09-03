@@ -96,7 +96,7 @@ export default function LayoutWrapper({
           onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} 
           hasNotifications={hasNotifications}
         />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 px-3 sm:px-6 pt-3 sm:pt-6 pb-28 sm:pb-12 overscroll-contain">
+        <main className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto bg-gray-50 px-3 sm:px-6 pt-3 sm:pt-6 pb-36 sm:pb-24 overscroll-contain">
           {children}
         </main>
       </div>

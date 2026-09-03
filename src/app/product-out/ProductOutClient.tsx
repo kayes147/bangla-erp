@@ -55,7 +55,7 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pt-4">
+    <div className="max-w-6xl mx-auto space-y-8 pt-4 pb-24">
       {/* Header */}
       <div className="flex items-center space-x-3 mb-6">
         <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
