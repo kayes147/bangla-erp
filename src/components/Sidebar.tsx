@@ -2,12 +2,29 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Home, PackagePlus, PackageMinus, Wallet, Receipt, Landmark, Users, Settings, UserCog, ChevronDown, ChevronUp, LogOut, CalendarClock } from 'lucide-react';
-import { signOut } from 'next-auth/react';
+import { 
+  Home, 
+  PackagePlus, 
+  PackageMinus, 
+  Wallet, 
+  Receipt, 
+  Landmark, 
+  Users, 
+  UserCog, 
+  ChevronDown, 
+  ChevronUp, 
+  CalendarClock,
+  Headset,
+  PhoneCall,
+  MessageSquare,
+  Mail,
+  X
+} from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [isHrOpen, setIsHrOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   return (
     <div className="w-64 bg-slate-900 text-white min-h-screen flex flex-col overflow-y-auto overflow-x-hidden">
@@ -123,19 +140,98 @@ export default function Sidebar() {
           )}
         </div>
       </nav>
-      <div className="p-4 border-t border-slate-700 sticky bottom-0 bg-slate-900 space-y-2">
-        <Link href="/settings" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors">
-          <Settings size={18} />
-          <span>Settings (সেটিংস)</span>
-        </Link>
-        <button 
-          onClick={() => signOut({ callbackUrl: '/login' })}
-          className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-red-900/50 text-red-400 transition-colors"
+
+      {/* Customer Support Button (Only Customer Support at bottom) */}
+      <div className="p-4 border-t border-slate-700 sticky bottom-0 bg-slate-900">
+        <button
+          onClick={() => setIsSupportOpen(true)}
+          className="w-full flex items-center space-x-3 p-3 rounded-xl bg-slate-800/80 hover:bg-emerald-950/40 text-emerald-400 hover:text-emerald-300 border border-slate-700 hover:border-emerald-700 transition-all font-bold text-sm cursor-pointer shadow-sm"
         >
-          <LogOut size={18} />
-          <span>Log Out (লগআউট)</span>
+          <Headset size={20} className="text-emerald-400 shrink-0" />
+          <div className="text-left">
+            <span>কাস্টমার সাপোর্ট</span>
+            <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Customer Support)</span>
+          </div>
         </button>
       </div>
+
+      {/* Customer Support Modal */}
+      {isSupportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
+          <div className="bg-white text-gray-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-emerald-600 text-white flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <Headset size={20} className="text-emerald-200" />
+                <h3 className="font-bold text-base">কাস্টমার সাপোর্ট (Customer Support)</h3>
+              </div>
+              <button
+                onClick={() => setIsSupportOpen(false)}
+                className="text-emerald-100 hover:text-white p-1 rounded-lg hover:bg-emerald-700/50 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-gray-600 leading-relaxed">
+                বাংলা ইআরপি ব্যবহারে যেকোনো প্রশ্ন, সহায়তা বা কারিগরি সমস্যার জন্য সরাসরি আমাদের সাপোর্ট টিমের সাথে যোগাযোগ করুন:
+              </p>
+
+              <div className="space-y-2.5">
+                {/* WhatsApp */}
+                <a
+                  href="https://wa.me/8801700000000?text=Hello%20Bangla%20ERP%20Support"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-3 p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-950 transition-colors font-bold text-sm"
+                >
+                  <div className="p-2 bg-emerald-600 text-white rounded-lg shrink-0">
+                    <MessageSquare size={18} />
+                  </div>
+                  <div>
+                    <span className="block text-sm">WhatsApp সাপোর্ট</span>
+                    <span className="block text-[11px] text-emerald-700 font-normal">সরাসরি হোয়াটসঅ্যাপে চ্যাট করুন</span>
+                  </div>
+                </a>
+
+                {/* Phone Call */}
+                <a
+                  href="tel:+8801700000000"
+                  className="flex items-center space-x-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-950 transition-colors font-bold text-sm"
+                >
+                  <div className="p-2 bg-blue-600 text-white rounded-lg shrink-0">
+                    <PhoneCall size={18} />
+                  </div>
+                  <div>
+                    <span className="block text-sm">হটলাইন সরাসরি কল</span>
+                    <span className="block text-[11px] text-blue-700 font-normal">+৮৮০ ১৭০০-০০০০০০</span>
+                  </div>
+                </a>
+
+                {/* Email */}
+                <a
+                  href="mailto:support@banglaerp.com"
+                  className="flex items-center space-x-3 p-3 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-950 transition-colors font-bold text-sm"
+                >
+                  <div className="p-2 bg-purple-600 text-white rounded-lg shrink-0">
+                    <Mail size={18} />
+                  </div>
+                  <div>
+                    <span className="block text-sm">ইমেইল সাপোর্ট</span>
+                    <span className="block text-[11px] text-purple-700 font-normal">support@banglaerp.com</span>
+                  </div>
+                </a>
+              </div>
+
+              <div className="pt-2 text-center text-[11px] text-gray-400 border-t border-gray-100">
+                সহায়তার সময়: সকাল ৯:০০ টা হতে রাত ১০:০০ টা (প্রতিদিন)
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
