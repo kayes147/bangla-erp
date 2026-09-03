@@ -285,3 +285,25 @@ export async function settleInvoiceDue(data: {
     return { success: false, error: error?.message || "Failed to settle due" };
   }
 }
+
+export async function recordTagadaReminder(data: {
+  invoiceId: string;
+  clientName: string;
+  amount: number;
+  channel: string;
+  requestedBy?: string;
+}) {
+  try {
+    await recordAuditLog(
+      data.requestedBy || "owner",
+      "TAGADA_REMINDER",
+      `বকেয়া তাগাদা পাঠানো হয়েছে: ${data.clientName}-কে ৳${Number(data.amount).toLocaleString()} বকেয়ার জন্য (${data.channel}, Invoice #${data.invoiceId.substring(0, 8)})`
+    );
+    revalidatePath("/loan");
+    revalidatePath("/audit-logs");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error recording tagada reminder:", error);
+    return { success: false, error: error?.message || "Failed to record reminder" };
+  }
+}

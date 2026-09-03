@@ -12,9 +12,12 @@ import {
   X, 
   Save, 
   Clock, 
-  Filter 
+  BellRing,
+  PhoneCall,
+  MessageSquare,
+  Copy
 } from "lucide-react";
-import { settleInvoiceDue } from "@/actions/invoiceActions";
+import { settleInvoiceDue, recordTagadaReminder } from "@/actions/invoiceActions";
 import { useRouter } from "next/navigation";
 import PrintableInvoiceModal from "@/components/PrintableInvoiceModal";
 
@@ -30,9 +33,11 @@ export default function LoanClient({
   const [filterTab, setFilterTab] = useState<"all" | "product_in" | "product_out" | "overdue">("all");
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<any | null>(null);
 
-  // Settle Due Modal State
-  const [settleModalOpen, setSettleModalOpen] = useState(false);
-  const [selectedInvoiceToSettle, setSelectedInvoiceToSettle] = useState<any | null>(null);
+  // Tagada / Reminder Modal State
+  const [tagadaModalOpen, setTagadaModalOpen] = useState(false);
+  const [selectedInvoiceForTagada, setSelectedInvoiceForTagada] = useState<any | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showSettleSection, setShowSettleSection] = useState(false);
   const [settleAmount, setSettleAmount] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -82,28 +87,75 @@ export default function LoanClient({
     return true;
   });
 
-  const handleOpenSettleModal = (inv: any) => {
+  const handleOpenTagadaModal = (inv: any) => {
     const due = inv.totalAmount - inv.paidAmount;
-    setSelectedInvoiceToSettle(inv);
+    setSelectedInvoiceForTagada(inv);
     setSettleAmount(due.toString());
-    setSettleModalOpen(true);
+    setShowSettleSection(false);
+    setCopied(false);
+    setTagadaModalOpen(true);
+  };
+
+  const generateTagadaMessage = (inv: any) => {
+    const due = inv.totalAmount - inv.paidAmount;
+    const dueDateText = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "শীঘ্রই";
+    const partyName = inv.client?.name || "সম্মানিত গ্রাহক/মহাজন";
+    const invoiceShort = inv.id.slice(-8);
+
+    return `আসসালামু আলাইকুম ${partyName}, বাংলা ইআরপি থেকে বকেয়া সংক্রান্ত তাগাদা: আপনার চালান #${invoiceShort} বাবদ অবশিষ্ট বকেয়া ৳${due.toLocaleString()} টাকা। পরিশোধের নির্ধারিত তারিখ ছিল: ${dueDateText}। অনুগ্রহপূর্বক দ্রুত বকেয়া পরিশোধের ব্যবস্থা করার বিনীত অনুরোধ রইলো। ধন্যবাদ।`;
+  };
+
+  const handleSendWhatsApp = async (inv: any) => {
+    const phone = inv.client?.phone || "";
+    const cleanPhone = phone.replace(/[^0-9]/g, "");
+    const formattedPhone = cleanPhone.startsWith("880") ? cleanPhone : `880${cleanPhone.replace(/^0/, "")}`;
+    const message = generateTagadaMessage(inv);
+
+    // Record audit log
+    await recordTagadaReminder({
+      invoiceId: inv.id,
+      clientName: inv.client?.name || "Client",
+      amount: inv.totalAmount - inv.paidAmount,
+      channel: "WhatsApp",
+      requestedBy: "owner",
+    });
+
+    const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleRecordCall = async (inv: any) => {
+    await recordTagadaReminder({
+      invoiceId: inv.id,
+      clientName: inv.client?.name || "Client",
+      amount: inv.totalAmount - inv.paidAmount,
+      channel: "Phone Call",
+      requestedBy: "owner",
+    });
+  };
+
+  const handleCopyMessage = (inv: any) => {
+    const message = generateTagadaMessage(inv);
+    navigator.clipboard.writeText(message);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
   };
 
   const handleSettleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInvoiceToSettle || !settleAmount || Number(settleAmount) <= 0) return;
+    if (!selectedInvoiceForTagada || !settleAmount || Number(settleAmount) <= 0) return;
 
     setLoading(true);
     const res = await settleInvoiceDue({
-      invoiceId: selectedInvoiceToSettle.id,
+      invoiceId: selectedInvoiceForTagada.id,
       amount: Number(settleAmount),
       requestedBy: "owner",
     });
 
     setLoading(false);
     if (res.success) {
-      setSettleModalOpen(false);
-      setSelectedInvoiceToSettle(null);
+      setTagadaModalOpen(false);
+      setSelectedInvoiceForTagada(null);
       setSettleAmount("");
       router.refresh();
     } else {
@@ -124,7 +176,7 @@ export default function LoanClient({
               বকেয়ার হিসাব <span className="text-lg font-normal text-gray-500">(Business Due Management)</span>
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              ব্যবসার কার কার কাছে কত টাকা বাকি আছে এবং পরিশোধের প্রতিশ্রুত তারিখের তালিকা।
+              ব্যবসার কার কার কাছে কত টাকা বাকি আছে এবং পরিশোধের প্রতিশ্রুত তারিখ ও তাগাদার তালিকা।
             </p>
           </div>
         </div>
@@ -142,7 +194,7 @@ export default function LoanClient({
           </div>
           <div className="mt-4">
             <h2 className="text-3xl font-bold">৳ {totalSupplierDue.toLocaleString()}</h2>
-            <p className="text-xs text-red-200 mt-1">পণ্য ক্রয়ের কারণে মহাজনদের বাকি দিতে হবে</p>
+            <p className="text-xs text-red-200 mt-1">পণ্য ইন করার কারণে মহাজনদের বাকি দিতে হবে</p>
           </div>
         </div>
 
@@ -156,7 +208,7 @@ export default function LoanClient({
           </div>
           <div className="mt-4">
             <h2 className="text-3xl font-bold">৳ {totalCustomerDue.toLocaleString()}</h2>
-            <p className="text-xs text-emerald-200 mt-1">পণ্য বিক্রির কারণে কাস্টমাররা জমা দেবে</p>
+            <p className="text-xs text-emerald-200 mt-1">পণ্য আউট করার কারণে কাস্টমাররা জমা দেবে</p>
           </div>
         </div>
 
@@ -261,7 +313,7 @@ export default function LoanClient({
                     {/* Party */}
                     <td className="p-4">
                       <div className="font-bold text-gray-900">{inv.client?.name}</div>
-                      <div className="text-xs text-gray-500">{inv.client?.phone}</div>
+                      <div className="text-xs text-gray-500">{inv.client?.phone || "ফোন নেই"}</div>
                     </td>
 
                     {/* Invoice Type */}
@@ -323,14 +375,16 @@ export default function LoanClient({
                       </span>
                     </td>
 
-                    {/* Actions */}
+                    {/* Actions: Tagada (Reminder) button */}
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={() => handleOpenSettleModal(inv)}
-                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                          onClick={() => handleOpenTagadaModal(inv)}
+                          className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 active:scale-95"
+                          title="বকেয়া তাগাদা পাঠান"
                         >
-                          {inv.type === "product_in" ? "পরিশোধ করুন" : "টাকা জমা নিন"}
+                          <BellRing size={13} />
+                          <span>তাগাদা</span>
                         </button>
                         <button
                           onClick={() => setSelectedInvoiceForPrint(inv)}
@@ -359,67 +413,160 @@ export default function LoanClient({
         </div>
       </div>
 
-      {/* Settle Due Modal */}
-      {settleModalOpen && selectedInvoiceToSettle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-              <h3 className="font-bold text-gray-900">
-                {selectedInvoiceToSettle.type === "product_in" 
-                  ? "মহাজনকে বকেয়া পরিশোধ করুন" 
-                  : "কাস্টমারের কাছ থেকে বকেয়া আদায় করুন"}
-              </h3>
+      {/* Tagada / Reminder Modal */}
+      {tagadaModalOpen && selectedInvoiceForTagada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-150">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-gray-100 bg-amber-600 text-white flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <BellRing size={20} className="text-amber-200" />
+                <h3 className="font-bold text-base">বকেয়া তাগাদা ও রিমাইন্ডার (Due Reminder)</h3>
+              </div>
               <button
-                onClick={() => setSettleModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setTagadaModalOpen(false)}
+                className="text-amber-100 hover:text-white p-1 rounded-lg hover:bg-amber-700/50 transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSettleSubmit} className="p-6 space-y-4">
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs space-y-1 text-amber-900">
-                <p><span className="font-bold">পার্টি:</span> {selectedInvoiceToSettle.client?.name}</p>
-                <p><span className="font-bold">চালানের মোট টাকা:</span> ৳ {selectedInvoiceToSettle.totalAmount.toLocaleString()}</p>
-                <p><span className="font-bold">বর্তমান বকেয়া:</span> <span className="text-red-600 font-bold">৳ {(selectedInvoiceToSettle.totalAmount - selectedInvoiceToSettle.paidAmount).toLocaleString()}</span></p>
+            <div className="p-6 space-y-5">
+              {/* Due Details Card */}
+              <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-bold text-base text-gray-900">{selectedInvoiceForTagada.client?.name}</h4>
+                    <p className="text-xs text-gray-500 font-medium">{selectedInvoiceForTagada.client?.phone || "ফোন নম্বর নেই"}</p>
+                  </div>
+                  <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-xs font-mono font-bold">
+                    #{selectedInvoiceForTagada.id.slice(-8)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-amber-200/60 text-xs">
+                  <div>
+                    <span className="text-gray-500 block">বাকি শুরুর তারিখ:</span>
+                    <span className="font-bold text-gray-800">{new Date(selectedInvoiceForTagada.date).toLocaleDateString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">পরিশোধের প্রতিশ্রুত তারিখ:</span>
+                    <span className="font-bold text-gray-800">
+                      {selectedInvoiceForTagada.dueDate ? new Date(selectedInvoiceForTagada.dueDate).toLocaleDateString() : "নির্ধারিত নেই"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-between items-center border-t border-amber-200/60">
+                  <span className="text-xs font-bold text-gray-700">বকেয়া টাকার পরিমাণ:</span>
+                  <span className="text-xl font-bold text-red-600">
+                    ৳ {(selectedInvoiceForTagada.totalAmount - selectedInvoiceForTagada.paidAmount).toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Overdue Alert Banner */}
+                {selectedInvoiceForTagada.dueDate && new Date(selectedInvoiceForTagada.dueDate) < now && (
+                  <div className="mt-2 bg-red-100 border border-red-300 text-red-800 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5">
+                    <AlertCircle size={15} className="shrink-0 text-red-600" />
+                    <span>⚠️ সতর্কবার্তা: নির্ধারিত পরিশোধের তারিখ পেরিয়ে গেছে!</span>
+                  </div>
+                )}
               </div>
 
+              {/* Tagada Message Preview */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  পরিশোধ / জমার পরিমাণ <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
+                  তাগাদা বার্তার খসড়া (Message Preview)
                 </label>
-                <input
-                  type="number"
-                  value={settleAmount}
-                  onChange={(e) => setSettleAmount(e.target.value)}
-                  max={selectedInvoiceToSettle.totalAmount - selectedInvoiceToSettle.paidAmount}
-                  min={1}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-lg font-bold text-gray-900 outline-none focus:ring-2 focus:ring-amber-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  টাকা পরিশোধ করলে মূল ক্যাশ ও পার্টির বাকি খাতা স্বয়ংক্রিয়ভাবে আপডেট হবে।
-                </p>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-800 leading-relaxed font-medium">
+                  {generateTagadaMessage(selectedInvoiceForTagada)}
+                </div>
               </div>
 
-              <div className="pt-2 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setSettleModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-bold text-sm hover:bg-gray-50"
-                >
-                  বাতিল
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center space-x-1 shadow-sm"
-                >
-                  <Save size={16} />
-                  <span>{loading ? "Saving..." : "নিশ্চিত করুন"}</span>
-                </button>
+              {/* Action Channels */}
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-gray-600">তাগাদা পাঠানোর মাধ্যম বেছে নিন:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* WhatsApp */}
+                  <button
+                    type="button"
+                    onClick={() => handleSendWhatsApp(selectedInvoiceForTagada)}
+                    className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                  >
+                    <MessageSquare size={16} />
+                    <span>WhatsApp তাগাদা</span>
+                  </button>
+
+                  {/* Phone Call */}
+                  <a
+                    href={`tel:${selectedInvoiceForTagada.client?.phone || ""}`}
+                    onClick={() => handleRecordCall(selectedInvoiceForTagada)}
+                    className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 text-center"
+                  >
+                    <PhoneCall size={16} />
+                    <span>সরাসরি কল দিন</span>
+                  </a>
+
+                  {/* Copy Message */}
+                  <button
+                    type="button"
+                    onClick={() => handleCopyMessage(selectedInvoiceForTagada)}
+                    className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-all border border-gray-200 active:scale-95"
+                  >
+                    {copied ? <CheckCircle2 size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                    <span>{copied ? "কপি হয়েছে!" : "মেসেজ কপি"}</span>
+                  </button>
+                </div>
               </div>
-            </form>
+
+              {/* Settlement Option */}
+              <div className="pt-3 border-t border-gray-100">
+                {!showSettleSection ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSettleSection(true);
+                      setSettleAmount((selectedInvoiceForTagada.totalAmount - selectedInvoiceForTagada.paidAmount).toString());
+                    }}
+                    className="w-full py-2 text-center text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200"
+                  >
+                    + টাকা আদায় / পরিশোধের এন্ট্রি করতে চান?
+                  </button>
+                ) : (
+                  <form onSubmit={handleSettleSubmit} className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-gray-800">পরিশোধের পরিমাণ লিখুন:</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSettleSection(false)}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        বন্ধ করুন
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      value={settleAmount}
+                      onChange={(e) => setSettleAmount(e.target.value)}
+                      max={selectedInvoiceForTagada.totalAmount - selectedInvoiceForTagada.paidAmount}
+                      min={1}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg text-base font-bold text-gray-900 bg-white outline-none focus:ring-2 focus:ring-amber-500"
+                      required
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center space-x-1"
+                      >
+                        <Save size={14} />
+                        <span>{loading ? "Saving..." : "পরিশোধ নিশ্চিত করুন"}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
