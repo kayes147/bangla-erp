@@ -181,7 +181,7 @@ export default async function Home() {
             <Landmark size={24} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-800">মোট ঋণ <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Total Loan/Due)</span></p>
+            <p className="text-sm font-bold text-gray-800">মোট বকেয়া <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Total Due)</span></p>
             <p className="text-2xl font-bold text-gray-900 mt-1">৳ {totalDueReceivable.toLocaleString()}</p>
           </div>
         </div>
