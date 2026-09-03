@@ -159,18 +159,6 @@ export default function TopNav({
                   </div>
                 </div>
 
-                {/* Super Admin Control Link */}
-                <div className="px-2 pt-1 border-b border-gray-100 pb-1">
-                  <Link
-                    href="/super-admin"
-                    onClick={() => setIsProfileOpen(false)}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 text-amber-700 hover:bg-amber-50 rounded-xl text-xs font-bold transition-colors"
-                  >
-                    <ShieldCheck size={16} className="text-amber-600" />
-                    <span>সুপার অ্যাডমিন ব্যাকএন্ড (DB)</span>
-                  </Link>
-                </div>
-
                 {/* Logout Option */}
                 <div className="p-2">
                   <button

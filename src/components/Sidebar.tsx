@@ -186,22 +186,11 @@ export default function Sidebar({
               prefetch={false} 
               onClick={onClose}
               className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${
-                pathname.startsWith('/notifications') ? 'bg-slate-800 text-white' : 'text-purple-400'
+                pathname === '/notifications' ? 'bg-slate-800 text-white' : 'text-slate-300'
               }`}
             >
               <Bell size={18} className="shrink-0" />
               <span>নোটিফিকেশন <span className="text-[10px] font-normal text-purple-300 block mt-0.5">(Notifications)</span></span>
-            </Link>
-            <Link 
-              href="/super-admin" 
-              prefetch={false} 
-              onClick={onClose}
-              className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${
-                pathname.startsWith('/super-admin') ? 'bg-slate-800 text-white' : 'text-amber-400'
-              }`}
-            >
-              <ShieldAlert size={18} className="shrink-0 text-amber-400" />
-              <span>সুপার অ্যাডমিন <span className="text-[10px] font-normal text-amber-300 block mt-0.5">(Backend Control & DB)</span></span>
             </Link>
           </div>
           
