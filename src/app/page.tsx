@@ -1,4 +1,16 @@
-import { DollarSign, ShoppingBag, TrendingUp, Wallet, Receipt, Landmark, PackagePlus, PackageMinus } from "lucide-react";
+import { 
+  DollarSign, 
+  ShoppingBag, 
+  TrendingUp, 
+  Wallet, 
+  Receipt, 
+  Landmark, 
+  PackagePlus, 
+  PackageMinus,
+  Boxes,
+  ArrowDownToLine,
+  ArrowUpFromLine
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { getPendingApprovals } from "@/actions/approvalActions";
@@ -13,6 +25,7 @@ export default async function Home() {
 
   let allTransactions: any[] = [];
   let mainCash = 0;
+  let todaysExpenses: any[] = [];
   let dailyExpenseTotal = 0;
   let salesTotal = 0;
   let salesReceived = 0;
@@ -24,18 +37,32 @@ export default async function Home() {
   let purchasesProductCount = 0;
   let totalDueReceivable = 0;
   let monthlyProfit = 0;
-  let lowStockProducts: any[] = [];
+  let inventoryList: any[] = [];
+  let overallTotalIn = 0;
+  let overallTotalOut = 0;
+  let overallCurrentStock = 0;
   let totalPending = 0;
 
   try {
-    // 1. Calculate Main Cash
-    allTransactions = await prisma.transaction.findMany();
+    // 1. Calculate Main Cash and get all transactions sorted newest first
+    allTransactions = await prisma.transaction.findMany({
+      orderBy: { date: "desc" },
+      include: {
+        client: true,
+        invoice: {
+          include: {
+            client: true
+          }
+        }
+      }
+    });
+
     mainCash = allTransactions.reduce((acc, t) => {
       return t.type === 'in' ? acc + t.amount : acc - t.amount;
     }, 0);
 
     // 2. Calculate Today's Expenses
-    const todaysExpenses = await prisma.expense.findMany({
+    todaysExpenses = await prisma.expense.findMany({
       where: { date: { gte: today } }
     });
     dailyExpenseTotal = todaysExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -81,10 +108,42 @@ export default async function Home() {
     
     monthlyProfit = mSalesTotal - mPurchasesTotal - mExpensesTotal;
 
-    // 7. Low Stock Products
-    lowStockProducts = await prisma.product.findMany({
-      where: { stock: { lt: 10 } },
-      take: 5
+    // 7. Inventory (পণ্যের ইন, আউট ও পরিমাপ)
+    const allProducts = await prisma.product.findMany({
+      include: {
+        invoiceItems: {
+          include: {
+            invoice: true
+          }
+        }
+      },
+      orderBy: { updatedAt: "desc" }
+    });
+
+    inventoryList = allProducts.map((p) => {
+      let totalIn = 0;
+      let totalOut = 0;
+
+      p.invoiceItems.forEach((item) => {
+        if (item.invoice?.type === "product_in" && item.invoice?.status === "APPROVED") {
+          totalIn += item.quantity;
+        } else if (item.invoice?.type === "product_out" && item.invoice?.status === "APPROVED") {
+          totalOut += item.quantity;
+        }
+      });
+
+      overallTotalIn += totalIn;
+      overallTotalOut += totalOut;
+      overallCurrentStock += p.stock;
+
+      return {
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        totalIn,
+        totalOut,
+        currentStock: p.stock
+      };
     });
 
     // 8. Approvals
@@ -148,64 +207,97 @@ export default async function Home() {
             </div>
             <div className="text-center border-l border-gray-100">
               <span className="block text-gray-400">Due</span>
-              <span className="font-semibold text-red-500">৳ {salesDue.toLocaleString()}</span>
+              <span className="font-semibold text-orange-500">৳ {salesDue.toLocaleString()}</span>
             </div>
           </div>
         </div>
 
         {/* Main Cash */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4">
-            <Wallet size={24} />
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-3">
+            <div className="p-2.5 rounded-full bg-emerald-100 text-emerald-600 mr-3">
+              <Wallet size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800">মূল ক্যাশ <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Main Cash)</span></p>
+              <p className="text-xl font-bold text-gray-900 mt-1">৳ {mainCash.toLocaleString()}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-800">মূল ক্যাশ <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Main Cash)</span></p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">৳ {mainCash.toLocaleString()}</p>
+          <div className="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 text-xs">
+            <span className="text-gray-400">Available Business Funds</span>
+            <span className="font-medium text-emerald-600">Active</span>
           </div>
         </div>
 
         {/* Daily Expenses */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-full bg-red-100 text-red-600 mr-4">
-            <Receipt size={24} />
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-3">
+            <div className="p-2.5 rounded-full bg-red-100 text-red-600 mr-3">
+              <Receipt size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800">দৈনিক খরচ <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Today Expenses)</span></p>
+              <p className="text-xl font-bold text-gray-900 mt-1">৳ {dailyExpenseTotal.toLocaleString()}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-800">দৈনিক খরচ <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Daily Expenses)</span></p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">৳ {dailyExpenseTotal.toLocaleString()}</p>
-          </div>
-        </div>
-
-        {/* Loan */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-full bg-orange-100 text-orange-600 mr-4">
-            <Landmark size={24} />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-800">মোট বকেয়া <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Total Due)</span></p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">৳ {totalDueReceivable.toLocaleString()}</p>
+          <div className="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 text-xs">
+            <span className="text-gray-400">Total spent today</span>
+            <span className="font-medium text-red-600">{todaysExpenses?.length || 0} items</span>
           </div>
         </div>
 
-        {/* Monthly Profit */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
-            <TrendingUp size={24} />
+        {/* Total Due */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-3">
+            <div className="p-2.5 rounded-full bg-purple-100 text-purple-600 mr-3">
+              <Landmark size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800">মোট বকেয়া <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Total Due)</span></p>
+              <p className="text-xl font-bold text-gray-900 mt-1">৳ {totalDueReceivable.toLocaleString()}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-800">মাসিক লাভ <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Monthly Profit)</span></p>
-            <p className={`text-2xl font-bold ${monthlyProfit < 0 ? 'text-red-600' : 'text-gray-900'} mt-1`}>
-              ৳ {monthlyProfit.toLocaleString()}
-            </p>
+          <div className="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 text-xs">
+            <span className="text-gray-400">Customer Net Receivable</span>
+            <span className="font-medium text-purple-600">Pending</span>
           </div>
         </div>
+
+        {/* Estimated Profit */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-3">
+            <div className="p-2.5 rounded-full bg-indigo-100 text-indigo-600 mr-3">
+              <TrendingUp size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800">মাসিক প্রফিট (আনুমানিক) <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Monthly Profit)</span></p>
+              <p className={`text-xl font-bold mt-1 ${monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ৳ {monthlyProfit.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-between items-center mt-2 pt-3 border-t border-gray-100 text-xs">
+            <span className="text-gray-400">This Month Net Flow</span>
+            <span className={`font-medium ${monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {monthlyProfit >= 0 ? '+ Profitable' : '- Loss'}
+            </span>
+          </div>
+        </div>
+
       </div>
 
+      {/* Grid: Recent Transactions & Inventory */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Transactions Table */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-gray-800">সাম্প্রতিক লেনদেন <span className="text-xs font-normal text-gray-500">(Recent Transactions)</span></h2>
-            <Link href="/main-cash" className="text-blue-600 text-sm font-medium hover:underline">View All</Link>
+            <div>
+              <h2 className="text-lg font-bold text-gray-800">সাম্প্রতিক লেনদেন (Recent Transactions)</h2>
+              <p className="text-xs text-gray-500 mt-0.5">রিয়েল-টাইম সর্বশেষ ক্যাশ ইন, ক্যাশ আউট ও খরচের তালিকা</p>
+            </div>
+            <Link href="/main-cash" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
+              View All
+            </Link>
           </div>
           <div className="p-0 overflow-x-auto">
             <table className="w-full text-left text-sm text-gray-600">
@@ -214,7 +306,7 @@ export default async function Home() {
                   <th className="p-4 font-medium">Type</th>
                   <th className="p-4 font-medium">
                     <div className="flex items-center justify-between">
-                      <span>Details (বিবরণ)</span>
+                      <span>Description (বিবরণ)</span>
                       <span>Invoice ID (চালান নং)</span>
                     </div>
                   </th>
@@ -224,7 +316,8 @@ export default async function Home() {
                 </tr>
               </thead>
               <tbody>
-                {allTransactions.slice(0, 5).reverse().map((t) => {
+                {/* 8 Most Recent Transactions (sorted newest first) */}
+                {allTransactions.slice(0, 8).map((t) => {
                   const invoiceIdFromDesc = t.description?.match(/#([a-zA-Z0-9]+)/)?.[1];
                   const rawInvId = t.invoiceId || invoiceIdFromDesc;
                   const displayInvId = rawInvId ? `#${rawInvId.slice(-8)}` : null;
@@ -271,7 +364,7 @@ export default async function Home() {
                 })}
                 {allTransactions.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center text-gray-500 font-medium">No transactions yet.</td>
+                    <td colSpan={5} className="p-4 text-center text-gray-500 font-medium">কোনো লেনদেন পাওয়া যায়নি।</td>
                   </tr>
                 )}
               </tbody>
@@ -279,24 +372,72 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Low Stock Alert */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-lg font-bold text-gray-800">Low Stock Alert (কম স্টক)</h2>
-          </div>
-          <div className="p-6 space-y-4">
-            {lowStockProducts.map(p => (
-              <div key={p.id} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0">
-                <div>
-                  <p className="text-sm font-bold text-gray-800">{p.name}</p>
-                  {p.sku && <p className="text-xs text-gray-500 font-medium">SKU: {p.sku}</p>}
-                </div>
-                <span className="text-red-600 font-bold text-sm bg-red-50 px-2 py-1 rounded">{p.stock} left</span>
+        {/* Inventory Section (ইনভেন্টরি - পণ্যের ইন, আউট ও পরিমাপ) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between overflow-hidden">
+          <div>
+            <div className="p-5 border-b border-gray-100 bg-slate-50 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-gray-900 flex items-center space-x-2">
+                  <Boxes size={20} className="text-indigo-600" />
+                  <span>ইনভেন্টরি <span className="text-xs font-normal text-gray-500">(Inventory)</span></span>
+                </h2>
+                <p className="text-[11px] text-gray-500 mt-0.5">কতগুলি প্রোডাক্ট এসেছে, কতগুলি বের হয়েছে ও বর্তমান স্টক</p>
               </div>
-            ))}
-            {lowStockProducts.length === 0 && (
-              <p className="text-sm text-gray-500 italic text-center">No low stock items.</p>
-            )}
+              <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded">
+                {inventoryList.length} টি পণ্য
+              </span>
+            </div>
+
+            {/* Quick Inventory Measurement Counters */}
+            <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50/60 border-b border-gray-100 text-center">
+              <div className="p-2.5 rounded-xl bg-white border border-emerald-200 shadow-2xs">
+                <span className="block text-[10px] text-emerald-700 font-bold uppercase">মোট পণ্য ইন</span>
+                <span className="text-base font-bold text-emerald-700">+{overallTotalIn.toLocaleString()}</span>
+                <span className="block text-[9px] text-gray-400">এসেছে</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white border border-blue-200 shadow-2xs">
+                <span className="block text-[10px] text-blue-700 font-bold uppercase">মোট পণ্য আউট</span>
+                <span className="text-base font-bold text-blue-700">-{overallTotalOut.toLocaleString()}</span>
+                <span className="block text-[9px] text-gray-400">বের হয়েছে</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white border border-purple-200 shadow-2xs">
+                <span className="block text-[10px] text-purple-700 font-bold uppercase">বর্তমান স্টক</span>
+                <span className="text-base font-bold text-purple-700">{overallCurrentStock.toLocaleString()}</span>
+                <span className="block text-[9px] text-gray-400">অবশিষ্ট</span>
+              </div>
+            </div>
+
+            {/* Product-wise Breakdown List */}
+            <div className="p-4 divide-y divide-gray-100 max-h-[380px] overflow-y-auto space-y-2.5">
+              {inventoryList.map((p) => (
+                <div key={p.id} className="pt-2.5 first:pt-0 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">{p.name}</p>
+                    <div className="flex items-center space-x-2 text-xs text-gray-500 mt-0.5">
+                      <span className="text-emerald-600 font-medium">ইন: +{p.totalIn}</span>
+                      <span>•</span>
+                      <span className="text-blue-600 font-medium">আউট: -{p.totalOut}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold ${
+                        p.currentStock > 0
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : p.currentStock === 0
+                          ? "bg-gray-100 text-gray-600 border border-gray-200"
+                          : "bg-red-50 text-red-700 border border-red-200"
+                      }`}
+                    >
+                      {p.currentStock} বাকি
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {inventoryList.length === 0 && (
+                <p className="text-sm text-gray-400 italic text-center py-8">কোনো পণ্য পাওয়া যায়নি।</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -319,7 +460,7 @@ export default async function Home() {
               </Link>
             </div>
           ) : (
-             <p className="text-sm text-gray-500 text-center font-medium">No pending requests right now.</p>
+            <p className="text-sm text-gray-500 text-center italic">No pending requests at the moment.</p>
           )}
         </div>
       </div>

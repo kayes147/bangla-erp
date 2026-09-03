@@ -123,6 +123,7 @@ export async function approveInvoice(id: string) {
     revalidatePath("/product-out");
     revalidatePath("/main-cash");
     revalidatePath("/clients");
+    revalidatePath("/");
     
     await recordAuditLog("owner", "APPROVE_INVOICE", `Approved ${invoice.type === "product_in" ? "Product In" : "Product Out"} Invoice #${id.substring(0, 8)} for ৳${invoice.totalAmount.toLocaleString()}`);
 
@@ -182,6 +183,7 @@ export async function approveExpense(id: string) {
     revalidatePath("/approvals");
     revalidatePath("/expenses");
     revalidatePath("/main-cash");
+    revalidatePath("/");
     
     await recordAuditLog("owner", "APPROVE_EXPENSE", `Approved expense of ৳${expense.amount.toLocaleString()} (${expense.description})`);
 
@@ -198,6 +200,7 @@ export async function rejectExpense(id: string) {
       data: { status: "REJECTED" }
     });
     revalidatePath("/approvals");
+    revalidatePath("/");
     await recordAuditLog("owner", "REJECT_EXPENSE", `Rejected expense #${id.substring(0, 8)}`);
     return { success: true };
   } catch (error: any) {
@@ -213,6 +216,7 @@ export async function approveTransaction(id: string) {
     });
     revalidatePath("/approvals");
     revalidatePath("/main-cash");
+    revalidatePath("/");
     await recordAuditLog("owner", "APPROVE_TRANSACTION", `Approved cash ${tx.type === "in" ? "In" : "Out"} of ৳${tx.amount.toLocaleString()} (${tx.description})`);
     return { success: true };
   } catch (error: any) {
