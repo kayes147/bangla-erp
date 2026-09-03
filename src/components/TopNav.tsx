@@ -162,7 +162,16 @@ export default function TopNav({
                 {/* Logout Option */}
                 <div className="p-2">
                   <button
-                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem("erp_remember_me");
+                        sessionStorage.clear();
+                        document.cookie = "erp_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                      } catch (e) {
+                        console.warn("Storage clear error:", e);
+                      }
+                      signOut({ callbackUrl: "/login" });
+                    }}
                     className="w-full flex items-center space-x-2.5 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     <LogOut size={16} />

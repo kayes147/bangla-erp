@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -29,6 +30,21 @@ export default function LoginPage() {
       if (res?.error) {
         setErrorMsg("ভুল ইউজারনেম বা পাসওয়ার্ড! আবার চেষ্টা করুন।");
       } else {
+        // Save Remember Me preference
+        try {
+          if (rememberMe) {
+            localStorage.setItem("erp_remember_me", "true");
+            sessionStorage.setItem("erp_session_active", "true");
+            document.cookie = "erp_session_active=1; path=/; max-age=2592000; SameSite=Lax";
+          } else {
+            localStorage.removeItem("erp_remember_me");
+            sessionStorage.setItem("erp_session_active", "true");
+            document.cookie = "erp_session_active=1; path=/; SameSite=Lax";
+          }
+        } catch (storageErr) {
+          console.warn("Storage write error:", storageErr);
+        }
+
         const cleanUser = username.toLowerCase().trim();
         if (cleanUser === "kayes147@") {
           window.location.href = "/super-admin";
@@ -118,6 +134,24 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center justify-between pt-1 pb-1">
+              <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                />
+                <span className="text-xs sm:text-sm font-bold text-gray-700">
+                  আমাকে মনে রাখুন (Remember Me)
+                </span>
+              </label>
+              <span className="text-[11px] text-gray-400">
+                {rememberMe ? "ডিভাইসে লগইন থাকবে" : "ব্রাউজার বন্ধ করলে লগআউট হবে"}
+              </span>
             </div>
 
             <button

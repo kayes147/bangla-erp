@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import Sidebar from "./Sidebar";
 import ClientSidebar from "./ClientSidebar";
 import TopNav from "./TopNav";
@@ -56,6 +56,39 @@ export default function LayoutWrapper({
   const isSuperAdmin = pathname.startsWith("/super-admin");
   const userRole = (session?.user as any)?.role;
   const isClient = userRole === "CLIENT";
+
+  // Session Persistence & Remember Me Enforcement
+  useEffect(() => {
+    if (isAuthPage || isSuperAdmin || !session) return;
+
+    try {
+      const isRemembered = localStorage.getItem("erp_remember_me") === "true";
+      const hasSessionStorage = sessionStorage.getItem("erp_session_active") === "true";
+      const hasSessionCookie = document.cookie
+        .split("; ")
+        .some((row) => row.startsWith("erp_session_active="));
+
+      // If user did NOT check "Remember Me" and quit/closed the browser:
+      // Both sessionStorage and session cookie are purged by the browser.
+      if (!isRemembered && !hasSessionStorage && !hasSessionCookie) {
+        signOut({ callbackUrl: "/login" });
+      } else {
+        // Active session confirmed: ensure session indicators are present
+        if (!hasSessionStorage) {
+          sessionStorage.setItem("erp_session_active", "true");
+        }
+        if (!hasSessionCookie) {
+          if (isRemembered) {
+            document.cookie = "erp_session_active=1; path=/; max-age=2592000; SameSite=Lax";
+          } else {
+            document.cookie = "erp_session_active=1; path=/; SameSite=Lax";
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Session persistence validation error:", e);
+    }
+  }, [session, isAuthPage, isSuperAdmin]);
 
   // If logged in as client and visiting an owner page, redirect to portal dashboard
   useEffect(() => {
