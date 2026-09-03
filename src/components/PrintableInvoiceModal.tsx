@@ -113,7 +113,7 @@ export default function PrintableInvoiceModal({
           {/* Party Details */}
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs">
             <p className="font-bold text-gray-500 uppercase tracking-wider mb-1">
-              {isSale ? "ক্রেতা / গ্রাহকের বিবরণ:" : "মহাজন / সাপ্লায়ারের বিবরণ:"}
+              {isSale ? "ক্রেতা / গ্রাহকের বিবরণ:" : "প্রতিষ্ঠান / সাপ্লায়ারের বিবরণ:"}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>

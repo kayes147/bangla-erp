@@ -99,7 +99,7 @@ export async function createClientLogin(data: {
     revalidatePath("/clients");
     return {
       success: true,
-      message: "মহাজনের লগইন অ্যাক্সেস সফলভাবে তৈরি ও সংরক্ষিত হয়েছে!",
+      message: "প্রতিষ্ঠানের লগইন অ্যাক্সেস সফলভাবে তৈরি ও সংরক্ষিত হয়েছে!",
       user,
     };
   } catch (error: any) {
@@ -126,7 +126,7 @@ export async function submitClientProductOutRequest(data: {
     });
 
     if (!client) {
-      return { success: false, error: "মহাজন একাউন্ট খুঁজে পাওয়া যায়নি" };
+      return { success: false, error: "প্রতিষ্ঠান একাউন্ট খুঁজে পাওয়া যায়নি" };
     }
 
     const fullProductName = data.unit ? `${data.productName} (${data.unit})` : data.productName;

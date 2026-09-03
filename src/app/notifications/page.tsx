@@ -93,7 +93,7 @@ export default async function NotificationsPage() {
     for (const inv of overdueInvoices) {
       const remaining = inv.totalAmount - inv.paidAmount;
       if (remaining > 0) {
-        const partyName = inv.client?.name || "মহাজন";
+        const partyName = inv.client?.name || "প্রতিষ্ঠান";
         const dueDateFormatted = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("bn-BD") : "";
         notifications.push({
           id: `overdue-inv-${inv.id}`,

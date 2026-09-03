@@ -85,10 +85,10 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm font-bold text-gray-700">
-                  মহাজন <span className="text-[10px] font-normal text-gray-400 uppercase">(Mahajon)</span> <span className="text-red-500">*</span>
+                  প্রতিষ্ঠান <span className="text-[10px] font-normal text-gray-400 uppercase">(Company)</span> <span className="text-red-500">*</span>
                 </label>
                 <Link href="/clients/new" className="text-xs font-bold text-emerald-600 hover:underline">
-                  + নতুন মহাজন
+                  + নতুন প্রতিষ্ঠান
                 </Link>
               </div>
               <select 
@@ -97,7 +97,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
                 className="w-full p-3 border text-gray-900 placeholder-gray-400 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                 required
               >
-                <option value="">মহাজন সিলেক্ট করুন...</option>
+                <option value="">প্রতিষ্ঠান সিলেক্ট করুন...</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>
                     {c.name} {c.phone ? `(${c.phone})` : ""}
@@ -261,7 +261,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
                   ৳ {dueAmount.toLocaleString()}
                 </span>
                 <span className="text-xs text-amber-700 block mt-0.5">
-                  মহাজনকে এই বাকি টাকা পরবর্তীতে পরিশোধ করতে হবে।
+                  প্রতিষ্ঠানকে এই বাকি টাকা পরবর্তীতে পরিশোধ করতে হবে।
                 </span>
               </div>
               <div className="w-full sm:w-80">
@@ -299,7 +299,7 @@ export default function ProductInClient({ initialInvoices, clients, userRole }: 
             <thead className="bg-white border-b border-gray-100">
               <tr>
                 <th className="p-4 font-bold text-gray-700">তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Date)</span></th>
-                <th className="p-4 font-bold text-gray-700">মহাজন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Supplier)</span></th>
+                <th className="p-4 font-bold text-gray-700">প্রতিষ্ঠান <span className="text-[10px] font-normal text-gray-400 block uppercase">(Supplier)</span></th>
                 <th className="p-4 font-bold text-gray-700">প্রোডাক্ট <span className="text-[10px] font-normal text-gray-400 block uppercase">(Product Name)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-center">পরিমাণ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Qty)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-right">মোট টাকা <span className="text-[10px] font-normal text-gray-400 block uppercase">(Total)</span></th>

@@ -117,7 +117,7 @@ export default async function MainCash() {
 
                 if (t.description.startsWith("Payment for Invoice")) {
                   mainDesc = clientName 
-                    ? (t.type === "out" ? `পণ্য ইন (মহাজন: ${clientName})` : `পণ্য আউট (কাস্টমার: ${clientName})`)
+                    ? (t.type === "out" ? `পণ্য ইন (প্রতিষ্ঠান: ${clientName})` : `পণ্য আউট (কাস্টমার: ${clientName})`)
                     : (t.type === "out" ? "পণ্য ইন" : "পণ্য আউট");
                 }
 

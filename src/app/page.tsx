@@ -346,7 +346,7 @@ export default async function Home() {
 
                   if (t.description.startsWith("Payment for Invoice")) {
                     mainDesc = clientName 
-                      ? (t.type === "out" ? `পণ্য ইন (মহাজন: ${clientName})` : `পণ্য আউট (কাস্টমার: ${clientName})`)
+                      ? (t.type === "out" ? `পণ্য ইন (প্রতিষ্ঠান: ${clientName})` : `পণ্য আউট (কাস্টমার: ${clientName})`)
                       : (t.type === "out" ? "পণ্য ইন" : "পণ্য আউট");
                   }
 
@@ -493,7 +493,7 @@ export default async function Home() {
                 <thead className="bg-gray-50/80 border-b border-gray-100">
                   <tr>
                     <th className="p-4 font-bold text-gray-800">চালান নং <span className="text-[10px] font-normal text-gray-400 block uppercase">(ID)</span></th>
-                    <th className="p-4 font-bold text-gray-800">মহাজন / আবেদনকারী <span className="text-[10px] font-normal text-gray-400 block uppercase">(Requester)</span></th>
+                    <th className="p-4 font-bold text-gray-800">প্রতিষ্ঠান / আবেদনকারী <span className="text-[10px] font-normal text-gray-400 block uppercase">(Requester)</span></th>
                     <th className="p-4 font-bold text-gray-800">পণ্যের বিবরণ ও পরিমাণ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Product & Qty)</span></th>
                     <th className="p-4 font-bold text-gray-800">রিকোয়েস্টের ধরন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Type)</span></th>
                     <th className="p-4 font-bold text-gray-800">মোট টাকা <span className="text-[10px] font-normal text-gray-400 block uppercase">(Amount)</span></th>
@@ -503,7 +503,7 @@ export default async function Home() {
                 <tbody className="divide-y divide-gray-100">
                   {/* Pending Invoices */}
                   {pendingData.invoices?.map((inv: any) => {
-                    const requesterName = inv.client?.name || inv.requestedBy || "মহাজন";
+                    const requesterName = inv.client?.name || inv.requestedBy || "প্রতিষ্ঠান";
                     const displayId = `#${inv.id.slice(-6)}`;
                     const itemsDesc = inv.items?.map((it: any) => {
                       const pName = it.product?.name || it.productName || "পণ্য";

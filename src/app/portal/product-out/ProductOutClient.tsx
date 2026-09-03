@@ -117,7 +117,7 @@ export default function ProductOutClient({
 
               <div className="max-w-md mx-auto p-4 bg-white rounded-xl border border-emerald-200 text-left text-xs space-y-2">
                 <div className="flex justify-between border-b border-gray-100 pb-1.5">
-                  <span className="text-gray-500 font-medium">মহাজন:</span>
+                  <span className="text-gray-500 font-medium">প্রতিষ্ঠান:</span>
                   <span className="font-bold text-gray-900">{clientName}</span>
                 </div>
                 <div className="flex justify-between border-b border-gray-100 pb-1.5">
@@ -171,7 +171,7 @@ export default function ProductOutClient({
                   <p className="font-extrabold text-base text-gray-900 mt-0.5">
                     {clientName}{" "}
                     <span className="text-xs font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded ml-1">
-                      মহাজন
+                      প্রতিষ্ঠান
                     </span>
                   </p>
                 </div>

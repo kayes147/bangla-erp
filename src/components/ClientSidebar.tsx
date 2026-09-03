@@ -45,7 +45,7 @@ export default function ClientSidebar({
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-white truncate tracking-wide">BOLAKA FACTORY</h2>
               <span className="text-[10px] bg-purple-900/80 text-purple-300 border border-purple-700 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                মহাজন
+                প্রতিষ্ঠান
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">Powered by <span className="text-[13px] text-blue-400 font-bold">Bangla</span> <span className="text-[13px] font-medium text-slate-300">ERP</span></p>

@@ -97,7 +97,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
 
   const handleCopyCredentials = () => {
     if (!selectedClientForLogin) return;
-    const text = `মহাজন: ${selectedClientForLogin.name}\nইউজারনেম: ${loginUsername}\nপাসওয়ার্ড: ${loginPassword}\nওয়েবসাইট: ${window.location.origin}/login`;
+    const text = `প্রতিষ্ঠান: ${selectedClientForLogin.name}\nইউজারনেম: ${loginUsername}\nপাসওয়ার্ড: ${loginPassword}\nওয়েবসাইট: ${window.location.origin}/login`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -156,7 +156,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                 {/* Type: Mahajon */}
                 <td className="p-4">
                   <span className="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-md text-xs font-bold">
-                    মহাজন
+                    প্রতিষ্ঠান
                   </span>
                 </td>
 
@@ -219,7 +219,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
             {filteredClients.length === 0 && (
               <tr>
                 <td colSpan={6} className="p-8 text-center text-gray-400 font-medium">
-                  কোনো মহাজন পাওয়া যায়নি।
+                  কোনো প্রতিষ্ঠান পাওয়া যায়নি।
                 </td>
               </tr>
             )}
@@ -235,7 +235,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
             <div className="p-4 bg-indigo-600 text-white flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <ShieldCheck size={20} className="text-indigo-200" />
-                <h3 className="font-bold text-base">মহাজনের লগইন অ্যাক্সেস</h3>
+                <h3 className="font-bold text-base">প্রতিষ্ঠানের লগইন অ্যাক্সেস</h3>
               </div>
               <button
                 onClick={() => setSelectedClientForLogin(null)}
@@ -256,12 +256,12 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                     </div>
                     <h4 className="font-bold text-base text-emerald-900">লগইন সফলভাবে প্রস্তুত!</h4>
                     <p className="text-xs text-emerald-700">
-                      মহাজন এখন তার ইউজারনেম ও পাসওয়ার্ড দিয়ে বাংলা ইআরপিতে লগইন করতে পারবেন।
+                      প্রতিষ্ঠান এখন তার ইউজারনেম ও পাসওয়ার্ড দিয়ে বাংলা ইআরপিতে লগইন করতে পারবেন।
                     </p>
 
                     <div className="mt-3 p-3 bg-white rounded-lg border border-emerald-200 text-left text-xs font-mono space-y-1">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">মহাজন:</span>
+                        <span className="text-gray-400">প্রতিষ্ঠান:</span>
                         <span className="font-bold text-gray-800">{selectedClientForLogin.name}</span>
                       </div>
                       <div className="flex justify-between">
@@ -319,7 +319,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                   {/* Mahajon details header */}
                   <div className="p-3 bg-slate-50 rounded-xl border border-gray-100 flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] text-gray-400 uppercase font-bold block">মহাজন</span>
+                      <span className="text-[10px] text-gray-400 uppercase font-bold block">প্রতিষ্ঠান</span>
                       <span className="font-bold text-sm text-gray-900">{selectedClientForLogin.name}</span>
                     </div>
                     <span className="text-xs text-gray-500 font-mono font-bold bg-white px-2 py-1 rounded border border-gray-200">
@@ -341,7 +341,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                       required
                     />
                     <p className="text-[11px] text-gray-400 mt-1">
-                      মহাজন এই ইউজারনেম দিয়ে সিস্টেমে লগইন করবেন (যেমন: মোবাইল নম্বর)।
+                      প্রতিষ্ঠান এই ইউজারনেম দিয়ে সিস্টেমে লগইন করবেন (যেমন: মোবাইল নম্বর)।
                     </p>
                   </div>
 
@@ -405,7 +405,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
             <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <UserCheck size={20} className="text-indigo-400" />
-                <h3 className="font-bold text-base">মহাজন প্রোফাইল বিবরণ</h3>
+                <h3 className="font-bold text-base">প্রতিষ্ঠান প্রোফাইল বিবরণ</h3>
               </div>
               <button
                 onClick={() => setSelectedClientForProfile(null)}
@@ -424,7 +424,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">{selectedClientForProfile.name}</h3>
                 <span className="inline-block mt-1 px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-bold">
-                  মহাজন (Mahajon)
+                  প্রতিষ্ঠান (Company)
                 </span>
               </div>
 

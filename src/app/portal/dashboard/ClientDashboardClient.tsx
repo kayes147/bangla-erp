@@ -37,7 +37,7 @@ export default function ClientDashboardClient({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            মহাজন ড্যাশবোর্ড <span className="text-base font-normal text-gray-500">(Dashboard)</span>
+            প্রতিষ্ঠান ড্যাশবোর্ড <span className="text-base font-normal text-gray-500">(Dashboard)</span>
           </h1>
           <p className="text-xs sm:text-sm text-gray-600 mt-1">
             স্বাগতম, <span className="font-bold text-gray-900">{clientName}</span> | BOLAKA FACTORY-এর সাথে আপনার লেনদেন ও স্টকের সারসংক্ষেপ:

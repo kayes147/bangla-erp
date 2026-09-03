@@ -29,12 +29,12 @@ export default function TopNav({
     if (pathname.startsWith("/main-cash")) return { bn: "মূল ক্যাশ", en: "Main Cash" };
     if (pathname.startsWith("/expenses")) return { bn: "দৈনিক খরচ", en: "Daily Expense" };
     if (pathname.startsWith("/loan")) return { bn: "বকেয়ার হিসাব", en: "Business Due" };
-    if (pathname.startsWith("/clients")) return { bn: "মহাজন", en: "Mahajon" };
+    if (pathname.startsWith("/clients")) return { bn: "প্রতিষ্ঠান", en: "Company" };
     if (pathname.startsWith("/salary") || pathname.startsWith("/hr")) return { bn: "কর্মী", en: "Employees" };
     if (pathname.startsWith("/approvals")) return { bn: "অনুমোদন তালিকা", en: "Approvals" };
     if (pathname.startsWith("/audit-logs")) return { bn: "অডিট লগ", en: "Audit Logs" };
     if (pathname.startsWith("/notifications")) return { bn: "নোটিফিকেশন", en: "Notifications" };
-    if (pathname.startsWith("/portal/dashboard")) return { bn: "মহাজন ড্যাশবোর্ড", en: "Dashboard" };
+    if (pathname.startsWith("/portal/dashboard")) return { bn: "প্রতিষ্ঠান ড্যাশবোর্ড", en: "Dashboard" };
     if (pathname.startsWith("/portal/product-in")) return { bn: "প্রাপ্ত পণ্য", en: "Received" };
     if (pathname.startsWith("/portal/product-out")) return { bn: "পণ্য আউট ফর্ম", en: "Send Request" };
     return { bn: "বাংলা ইআরপি", en: "Bangla ERP" };
@@ -109,7 +109,7 @@ export default function TopNav({
                     : "bg-purple-100 text-purple-800"
                 }`}
               >
-                {userRole === "OWNER" ? "মালিক" : userRole === "MANAGER" ? "ম্যানেজার" : "মহাজন"}
+                {userRole === "OWNER" ? "মালিক" : userRole === "MANAGER" ? "ম্যানেজার" : "প্রতিষ্ঠান"}
               </span>
             </div>
             <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${isProfileOpen ? "rotate-180" : ""}`} />
@@ -138,7 +138,7 @@ export default function TopNav({
                   </div>
                   <div className="mt-2 flex items-center space-x-1.5">
                     <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded">
-                      {userRole === "OWNER" ? "মালিক (Owner)" : userRole === "MANAGER" ? "ম্যানেজার (Manager)" : "মহাজন (Mahajon)"}
+                      {userRole === "OWNER" ? "মালিক (Owner)" : userRole === "MANAGER" ? "ম্যানেজার (Manager)" : "প্রতিষ্ঠান (Company)"}
                     </span>
                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded flex items-center space-x-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>

@@ -121,7 +121,7 @@ export default function Sidebar({
             className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${pathname.startsWith('/clients') ? 'bg-slate-800 text-white' : 'text-slate-300'}`}
           >
             <Users size={18} />
-            <span>মহাজন <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Mahajon)</span></span>
+            <span>প্রতিষ্ঠান <span className="text-[10px] font-normal text-slate-400 block mt-0.5">(Company)</span></span>
           </Link>
           <Link 
             href="/loan" 

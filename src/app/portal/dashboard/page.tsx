@@ -56,7 +56,7 @@ export default async function ClientDashboard() {
     });
   }
 
-  const clientName = client?.name || session.user.name || "মহাজন";
+  const clientName = client?.name || session.user.name || "প্রতিষ্ঠান";
   const invoices = client?.invoices || [];
 
   // Calculations:

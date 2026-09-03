@@ -95,7 +95,7 @@ export default function LoanClient({
   const generateTagadaMessage = (inv: any) => {
     const due = inv.totalAmount - inv.paidAmount;
     const dueDateText = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "শীঘ্রই";
-    const partyName = inv.client?.name || "সম্মানিত গ্রাহক/মহাজন";
+    const partyName = inv.client?.name || "সম্মানিত গ্রাহক/প্রতিষ্ঠান";
     const invoiceShort = inv.id.slice(-8);
 
     return `আসসালামু আলাইকুম ${partyName}, বাংলা ইআরপি থেকে বকেয়া সংক্রান্ত তাগাদা: আপনার চালান #${invoiceShort} বাবদ অবশিষ্ট বকেয়া ৳${due.toLocaleString()} টাকা। পরিশোধের নির্ধারিত তারিখ ছিল: ${dueDateText}। অনুগ্রহপূর্বক দ্রুত বকেয়া পরিশোধের ব্যবস্থা করার বিনীত অনুরোধ রইলো। ধন্যবাদ।`;

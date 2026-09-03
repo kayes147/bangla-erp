@@ -53,7 +53,7 @@ export default function AddNewClient() {
         <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
           <UserPlus size={24} />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800">নতুন মহাজন যোগ করুন <span className="text-sm font-normal text-gray-500">(Add New Supplier)</span></h1>
+        <h1 className="text-2xl font-bold text-gray-800">নতুন প্রতিষ্ঠান যোগ করুন <span className="text-sm font-normal text-gray-500">(Add New Supplier)</span></h1>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -74,7 +74,7 @@ export default function AddNewClient() {
                   onChange={() => setType("supplier")} 
                   className="text-indigo-600 focus:ring-indigo-500 w-4 h-4" 
                 />
-                <span>মহাজন <span className="font-normal opacity-80">(Supplier)</span></span>
+                <span>প্রতিষ্ঠান <span className="font-normal opacity-80">(Supplier)</span></span>
               </label>
               <label className={`flex items-center space-x-2 cursor-pointer p-3 border rounded-lg font-bold transition-colors ${type === 'customer' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
                 <input 

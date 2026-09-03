@@ -28,7 +28,7 @@ export default async function ClientProductOutRequestPage() {
     client = await prisma.client.findFirst();
   }
 
-  const clientName = client?.name || session.user.name || "মহাজন";
+  const clientName = client?.name || session.user.name || "প্রতিষ্ঠান";
   const clientPhone = client?.phone || "";
 
   // Fetch product names from existing products or invoice items in the system
