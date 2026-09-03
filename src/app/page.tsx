@@ -106,7 +106,7 @@ export default async function Home() {
               <PackagePlus size={20} />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-800">আজকের ইন <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Product In)</span></p>
+              <p className="text-sm font-bold text-gray-800">আজকের পণ্য ইন <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Product In)</span></p>
               <p className="text-xl font-bold text-gray-900 mt-1">৳ {purchasesTotal.toLocaleString()}</p>
             </div>
           </div>
@@ -133,7 +133,7 @@ export default async function Home() {
               <PackageMinus size={20} />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-800">আজকের আউট <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Product Out)</span></p>
+              <p className="text-sm font-bold text-gray-800">আজকের পণ্য আউট <span className="text-[10px] font-normal text-gray-500 block uppercase tracking-wide">(Product Out)</span></p>
               <p className="text-xl font-bold text-gray-900 mt-1">৳ {salesTotal.toLocaleString()}</p>
             </div>
           </div>
