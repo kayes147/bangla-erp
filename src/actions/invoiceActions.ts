@@ -107,8 +107,8 @@ export async function createInvoice(data: {
           const client = await tx.client.findUnique({ where: { id: data.clientId } });
           const clientName = client?.name || "Client";
           const typeLabel = data.type === "product_in" 
-            ? `পণ্য ক্রয় (মহাজন: ${clientName})` 
-            : `পণ্য বিক্রয় (কাস্টমার: ${clientName})`;
+            ? `পণ্য ইন (মহাজন: ${clientName})` 
+            : `পণ্য আউট (কাস্টমার: ${clientName})`;
 
           await tx.transaction.create({
             data: {

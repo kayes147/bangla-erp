@@ -197,7 +197,7 @@ export default function LoanClient({
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            মহাজনের বাকি দেনা (ক্রয়)
+            মহাজনের বাকি (Product In)
           </button>
           <button
             onClick={() => setFilterTab("product_out")}
@@ -207,7 +207,7 @@ export default function LoanClient({
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            কাস্টমারের বাকি পাওনা (বিক্রি)
+            কাস্টমারের বাকি (Product Out)
           </button>
           <button
             onClick={() => setFilterTab("overdue")}
@@ -268,11 +268,11 @@ export default function LoanClient({
                     <td className="p-4">
                       {inv.type === "product_in" ? (
                         <span className="inline-flex items-center px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-xs font-bold">
-                          মহাজনের পাওনা (ক্রয়)
+                          মহাজনের দেনা (Product In)
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-bold">
-                          কাস্টমারের দেনা (বিক্রি)
+                          কাস্টমারের পাওনা (Product Out)
                         </span>
                       )}
                     </td>

@@ -98,11 +98,17 @@ export async function approveInvoice(id: string) {
 
       // 4. Create main cash transaction if paidAmount > 0
       if (invoice.paidAmount > 0) {
+        const client = await tx.client.findUnique({ where: { id: invoice.clientId } });
+        const clientName = client?.name || "Client";
+        const typeLabel = invoice.type === "product_in" 
+          ? `পণ্য ইন (মহাজন: ${clientName})` 
+          : `পণ্য আউট (কাস্টমার: ${clientName})`;
+
         await tx.transaction.create({
           data: {
             type: invoice.type === "product_in" ? "out" : "in",
             amount: invoice.paidAmount,
-            description: `Payment for Invoice #${invoice.id.substring(0, 8)}`,
+            description: typeLabel,
             status: "APPROVED",
             clientId: invoice.clientId,
             invoiceId: invoice.id,

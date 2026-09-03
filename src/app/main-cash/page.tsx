@@ -111,11 +111,14 @@ export default async function MainCash() {
                 const clientName = t.client?.name || (t as any).invoice?.client?.name;
 
                 // Format clean description
-                let mainDesc = t.description;
+                let mainDesc = t.description
+                  .replace(/পণ্য ক্রয়/g, "পণ্য ইন")
+                  .replace(/পণ্য বিক্রয়/g, "পণ্য আউট");
+
                 if (t.description.startsWith("Payment for Invoice")) {
                   mainDesc = clientName 
-                    ? (t.type === "out" ? `পণ্য ক্রয় (মহাজন: ${clientName})` : `পণ্য বিক্রয় (কাস্টমার: ${clientName})`)
-                    : "চালান পরিশোধ";
+                    ? (t.type === "out" ? `পণ্য ইন (মহাজন: ${clientName})` : `পণ্য আউট (কাস্টমার: ${clientName})`)
+                    : (t.type === "out" ? "পণ্য ইন" : "পণ্য আউট");
                 }
 
                 return (
