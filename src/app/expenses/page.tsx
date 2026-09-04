@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getExpenses } from "@/actions/expenseActions";
+import { getEmployees } from "@/actions/employeeActions";
 import ExpensesClient from "./ExpensesClient";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,16 @@ export default async function ExpensesPage() {
     redirect("/login");
   }
 
-  const { expenses } = await getExpenses();
+  const [{ expenses }, { employees }] = await Promise.all([
+    getExpenses(),
+    getEmployees(),
+  ]);
 
-  return <ExpensesClient initialExpenses={expenses || []} userRole={session.user?.name || "manager"} />;
+  return (
+    <ExpensesClient 
+      initialExpenses={expenses || []} 
+      employees={employees || []} 
+      userRole={session.user?.name || "manager"} 
+    />
+  );
 }

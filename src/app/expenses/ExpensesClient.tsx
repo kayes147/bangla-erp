@@ -1,10 +1,18 @@
 "use client";
 import { useState } from "react";
-import { Receipt, Plus, Search, Filter, Trash2, X, Save, UploadCloud, UserCircle } from "lucide-react";
+import { Receipt, Plus, Search, Filter, Trash2, X, Save, UploadCloud, UserCircle, UserCheck } from "lucide-react";
 import { addExpense, deleteExpense } from "@/actions/expenseActions";
 import { useRouter } from "next/navigation";
 
-export default function ExpensesClient({ initialExpenses, userRole }: { initialExpenses: any[], userRole: string }) {
+export default function ExpensesClient({ 
+  initialExpenses, 
+  employees = [],
+  userRole 
+}: { 
+  initialExpenses: any[], 
+  employees?: any[],
+  userRole: string 
+}) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -15,20 +23,61 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
   
   // Form State
   const [category, setCategory] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [customEmployeeName, setCustomEmployeeName] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [sourceOfFund, setSourceOfFund] = useState<"business_cash" | "other_source">("business_cash");
 
+  const isEmployeeCategory = ["Employee", "Salary", "Daily Labor"].includes(category);
+
+  const handleCategoryChange = (newCat: string) => {
+    setCategory(newCat);
+    if (!["Employee", "Salary", "Daily Labor"].includes(newCat)) {
+      setEmployeeId("");
+      setCustomEmployeeName("");
+    }
+  };
+
+  const handleSelectEmployee = (empId: string) => {
+    setEmployeeId(empId);
+    if (empId && empId !== "CUSTOM_NEW") {
+      const selected = employees.find((emp: any) => emp.id === empId);
+      if (selected) {
+        setCustomEmployeeName(selected.name);
+        const categoryLabel = category === "Salary" ? "বেতন বাবদ" : category === "Daily Labor" ? "দিনমজুরি বাবদ" : "খরচ বাবদ";
+        setDescription(`${selected.name} (${selected.designation || "কর্মী"}) - ${categoryLabel}`);
+      }
+    } else if (empId === "CUSTOM_NEW") {
+      setCustomEmployeeName("");
+    }
+  };
+
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !description) return;
+
+    if (isEmployeeCategory && !isPersonalExpense && !employeeId) {
+      alert("অনুগ্রহ করে কর্মীর নাম নির্বাচন করুন!");
+      return;
+    }
+
+    if (isEmployeeCategory && !isPersonalExpense && employeeId === "CUSTOM_NEW" && !customEmployeeName.trim()) {
+      alert("অনুগ্রহ করে কর্মীর নাম লিখুন!");
+      return;
+    }
     
     setLoading(true);
     const finalCategory = isPersonalExpense ? "Owner Personal" : category;
     const finalMethod = isPersonalExpense 
       ? (sourceOfFund === "other_source" ? "other_source" : paymentMethod)
       : paymentMethod;
+
+    const selectedEmp = employees.find((emp: any) => emp.id === employeeId);
+    const finalPaidTo = employeeId === "CUSTOM_NEW" 
+      ? customEmployeeName.trim() 
+      : selectedEmp?.name || undefined;
     
     const res = await addExpense({
       category: finalCategory || "Other",
@@ -37,12 +86,16 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
       isPersonal: isPersonalExpense,
       paymentMethod: finalMethod,
       requestedBy: mockRole,
+      employeeId: (employeeId && employeeId !== "CUSTOM_NEW") ? employeeId : undefined,
+      paidTo: finalPaidTo,
     });
     
     setLoading(false);
     if (res.success) {
       setIsModalOpen(false);
       setCategory("");
+      setEmployeeId("");
+      setCustomEmployeeName("");
       setAmount("");
       setDescription("");
       setPaymentMethod("cash");
@@ -206,8 +259,13 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                     <td className="p-4">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs font-bold">
-                          {e.category === "Daily Labor" ? "দিনমজুর" : e.category === "Salary" ? "বেতন" : e.category}
+                          {e.category === "Daily Labor" ? "দিনমজুর" : e.category === "Salary" ? "বেতন" : e.category === "Employee" ? "কর্মচারী" : e.category}
                         </span>
+                        {(e.employeeName || e.employee?.name || e.paidTo) && (
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 border border-blue-300 rounded text-xs font-bold flex items-center gap-1">
+                            👤 {e.employeeName || e.employee?.name || e.paidTo}
+                          </span>
+                        )}
                         {e.paymentMethod === "mobile_banking" ? (
                           <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold">
                             📱 বিকাশ/নগদ
@@ -382,18 +440,19 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                     ) : (
                       <select 
                         value={category}
-                        onChange={(e) => setCategory(e.target.value)}
+                        onChange={(e) => handleCategoryChange(e.target.value)}
                         className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-gray-900 bg-white" 
                         required
                       >
-                        <option value="" className="text-gray-500">নির্বাচন করুন (Select)</option>
+                        <option value="" className="text-gray-500">নির্বাচন করুন (Select Category)</option>
+                        <option value="Employee" className="text-gray-950 font-black bg-blue-50/50">👤 কর্মচারী / কর্মী (Employee)</option>
+                        <option value="Salary" className="text-gray-900">💼 বেতন / অগ্রিম (Salary / Employee Advance)</option>
                         <option value="Daily Labor" className="text-gray-900">👷 দিনমজুর (Daily Labor / Din Mojor)</option>
-                        <option value="Salary" className="text-gray-900">💼 বেতন (Salary / Employee Salary)</option>
-                        <option value="Tea & Snacks" className="text-gray-900">চা-নাস্তা (Tea & Snacks)</option>
-                        <option value="Transport" className="text-gray-900">যাতায়াত (Transport)</option>
-                        <option value="Utility Bills" className="text-gray-900">বিদ্যুৎ/গ্যাস (Utility Bills)</option>
-                        <option value="Maintenance" className="text-gray-900">মেরামত (Maintenance)</option>
-                        <option value="Other" className="text-gray-900">অন্যান্য (Other)</option>
+                        <option value="Tea & Snacks" className="text-gray-900">☕ চা-নাস্তা (Tea & Snacks)</option>
+                        <option value="Transport" className="text-gray-900">🚚 যাতায়াত / পরিবহন (Transport)</option>
+                        <option value="Utility Bills" className="text-gray-900">💡 বিদ্যুৎ / গ্যাস (Utility Bills)</option>
+                        <option value="Maintenance" className="text-gray-900">🔧 মেরামত / কারখানা (Maintenance)</option>
+                        <option value="Other" className="text-gray-900">📦 অন্যান্য (Other)</option>
                       </select>
                     )}
                   </div>
@@ -410,6 +469,59 @@ export default function ExpensesClient({ initialExpenses, userRole }: { initialE
                       required 
                     />
                   </div>
+
+                  {/* Automatic Employee Select Option when Employee / Salary / Daily Labor is selected */}
+                  {isEmployeeCategory && !isPersonalExpense && (
+                    <div className="sm:col-span-2 bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-blue-50/90 border-2 border-blue-400 rounded-xl p-3.5 space-y-2.5 shadow-2xs animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="block text-xs font-black text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="p-1 bg-blue-600 text-white rounded-md text-[10px]">👤</span>
+                          কর্মীর নাম নির্বাচন করুন <span className="text-[10px] font-normal text-blue-700 uppercase">(Select Employee Name)</span> <span className="text-red-500">*</span>
+                        </label>
+                        <span className="text-[11px] font-bold text-blue-800 bg-blue-100/90 px-2 py-0.5 rounded-md border border-blue-200 self-start sm:self-auto">
+                          মোট তালিকাভুক্ত কর্মী: {employees.length} জন
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2.5">
+                        <select
+                          value={employeeId}
+                          onChange={(e) => handleSelectEmployee(e.target.value)}
+                          className="w-full p-2.5 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-950 bg-white text-sm shadow-2xs"
+                          required
+                        >
+                          <option value="">-- তালিকার কর্মীর নাম বেছে নিন (Select Employee) --</option>
+                          {employees.map((emp: any) => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.name} {emp.designation ? `(${emp.designation})` : emp.type ? `(${emp.type})` : ""} — ফোন: {emp.phone}
+                            </option>
+                          ))}
+                          <option value="CUSTOM_NEW">➕ তালিকায় নেই এমন নতুন কর্মীর নাম লিখুন...</option>
+                        </select>
+
+                        {employeeId === "CUSTOM_NEW" && (
+                          <div className="pt-1 animate-in fade-in duration-150">
+                            <label className="block text-xs font-bold text-blue-900 mb-1">
+                              কর্মীর নাম লিখুন <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={customEmployeeName}
+                              onChange={(e) => {
+                                setCustomEmployeeName(e.target.value);
+                                if (!description || description.startsWith("কর্মী:")) {
+                                  setDescription(`কর্মী: ${e.target.value}`);
+                                }
+                              }}
+                              placeholder="যেমন: মো: রফিক"
+                              className="w-full p-2.5 border-2 border-blue-400 rounded-lg text-sm font-bold bg-white text-gray-950 outline-none focus:ring-2 focus:ring-blue-500"
+                              required
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Payment Method */}
                   <div className={`sm:col-span-2 ${isPersonalExpense && sourceOfFund === "other_source" ? "hidden" : "block"}`}>

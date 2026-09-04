@@ -11,6 +11,8 @@ export async function addExpense(data: {
   isPersonal: boolean;
   paymentMethod?: string; // "cash", "mobile_banking", "bank", or "other_source"
   requestedBy: string; // the username (e.g., 'manager' or 'owner')
+  employeeId?: string;
+  paidTo?: string;
 }) {
   try {
     const isOwner = data.requestedBy === "owner";
@@ -31,7 +33,13 @@ export async function addExpense(data: {
         paymentMethod: paymentMethod,
         requestedBy: data.requestedBy,
         status: status,
+        employee: data.employeeId ? { connect: { id: data.employeeId } } : undefined,
+        paidTo: data.paidTo || undefined,
       },
+      include: {
+        category: true,
+        employee: true,
+      }
     });
 
     // If it's APPROVED immediately:
@@ -102,12 +110,18 @@ export async function getExpenses() {
   try {
     const expenses = await prisma.expense.findMany({
       orderBy: { date: "desc" },
-      include: { category: true }
+      include: { 
+        category: true,
+        employee: {
+          select: { id: true, name: true, phone: true, designation: true }
+        }
+      }
     });
     
     const formattedExpenses = expenses.map(e => ({
       ...e,
-      category: e.category.name
+      category: e.category.name,
+      employeeName: e.employee?.name || e.paidTo || null
     }));
 
     return { success: true, expenses: formattedExpenses };
