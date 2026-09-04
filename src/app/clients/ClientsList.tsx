@@ -19,9 +19,10 @@ import {
   Trash2,
   AlertTriangle,
   Pencil,
-  Save
+  Save,
+  UserX
 } from "lucide-react";
-import { createClientLogin, deleteClient, updateClient } from "@/actions/clientActions";
+import { createClientLogin, deleteClient, updateClient, revokeClientLogin } from "@/actions/clientActions";
 import { useRouter } from "next/navigation";
 
 export default function ClientsList({ initialClients }: { initialClients: any[] }) {
@@ -150,6 +151,39 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
       setEditError(err.message || "একটি ত্রুটি ঘটেছে");
     } finally {
       setIsSavingEdit(false);
+    }
+  };
+
+  // Revoke Login Modal State
+  const [clientToRevoke, setClientToRevoke] = useState<any | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
+  const [revokeError, setRevokeError] = useState("");
+
+  const handleRevokeLogin = async () => {
+    if (!clientToRevoke) return;
+    setIsRevoking(true);
+    setRevokeError("");
+    try {
+      const res = await revokeClientLogin(clientToRevoke.id);
+      if (res.success) {
+        setClientToRevoke(null);
+        if (selectedClientForLogin?.id === clientToRevoke.id) {
+          setSelectedClientForLogin(null);
+        }
+        if (selectedClientForProfile?.id === clientToRevoke.id) {
+          setSelectedClientForProfile({
+            ...selectedClientForProfile,
+            user: null,
+          });
+        }
+        router.refresh();
+      } else {
+        setRevokeError(res.error || "লগইন অ্যাক্সেস বাতিল করতে ব্যর্থ হয়েছে");
+      }
+    } catch (err: any) {
+      setRevokeError(err.message || "একটি ত্রুটি ঘটেছে");
+    } finally {
+      setIsRevoking(false);
     }
   };
 
@@ -284,12 +318,25 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                         <span>সক্রিয় অ্যাক্সেস</span>
                       </span>
                       <p className="text-[11px] text-gray-500 mt-1 font-mono font-bold">ID: {client.user.username}</p>
-                      <button
-                        onClick={() => openLoginModal(client)}
-                        className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold mt-0.5 block cursor-pointer"
-                      >
-                        পাসওয়ার্ড রিসেট / দেখুন
-                      </button>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <button
+                          onClick={() => openLoginModal(client)}
+                          className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold cursor-pointer"
+                        >
+                          রিসেট / দেখুন
+                        </button>
+                        <span className="text-gray-300">•</span>
+                        <button
+                          onClick={() => {
+                            setRevokeError("");
+                            setClientToRevoke(client);
+                          }}
+                          className="text-[11px] text-red-600 hover:text-red-800 hover:underline font-bold cursor-pointer"
+                          title="লগইন অ্যাক্সেস বাতিল করুন (Revoke Login Access)"
+                        >
+                          বাতিল (Revoke)
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -507,22 +554,43 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="pt-3 flex items-center justify-end space-x-3 border-t border-gray-100">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedClientForLogin(null)}
-                      className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
-                    >
-                      বাতিল
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSavingLogin}
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
-                    >
-                      <UserCheck size={16} />
-                      <span>{isSavingLogin ? "তৈরি হচ্ছে..." : "লগইন সক্রিয় করুন"}</span>
-                    </button>
+                  <div className="pt-3 flex items-center justify-between border-t border-gray-100">
+                    {selectedClientForLogin.user ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const c = selectedClientForLogin;
+                          setSelectedClientForLogin(null);
+                          setRevokeError("");
+                          setClientToRevoke(c);
+                        }}
+                        className="px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center space-x-1 cursor-pointer"
+                        title="লগইন অ্যাক্সেস বাতিল করুন"
+                      >
+                        <UserX size={14} />
+                        <span>অ্যাক্সেস বাতিল (Revoke)</span>
+                      </button>
+                    ) : (
+                      <div />
+                    )}
+
+                    <div className="flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClientForLogin(null)}
+                        className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                      >
+                        বাতিল
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSavingLogin}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+                      >
+                        <UserCheck size={16} />
+                        <span>{isSavingLogin ? "তৈরি হচ্ছে..." : selectedClientForLogin.user ? "পাসওয়ার্ড আপডেট করুন" : "লগইন সক্রিয় করুন"}</span>
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
@@ -597,9 +665,23 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                 <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
                   <span className="text-gray-500 font-medium">লগইন অ্যাক্সেস:</span>
                   {selectedClientForProfile.user ? (
-                    <span className="font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                      সক্রিয় ({selectedClientForProfile.user.username})
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                        সক্রিয় ({selectedClientForProfile.user.username})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const c = selectedClientForProfile;
+                          setRevokeError("");
+                          setClientToRevoke(c);
+                        }}
+                        className="text-[11px] text-red-600 hover:text-red-800 hover:underline font-bold cursor-pointer"
+                        title="লগইন অ্যাক্সেস বাতিল করুন"
+                      >
+                        বাতিল
+                      </button>
+                    </div>
                   ) : (
                     <span className="text-gray-400 font-medium">অ্যাক্সেস তৈরি করা হয়নি</span>
                   )}
@@ -860,6 +942,82 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* REVOKE ACCESS CONFIRMATION MODAL */}
+      {clientToRevoke && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-amber-600 text-white flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <UserX size={20} className="text-amber-200" />
+                <h3 className="font-bold text-base">লগইন অ্যাক্সেস বাতিল (Revoke)</h3>
+              </div>
+              <button
+                onClick={() => setClientToRevoke(null)}
+                disabled={isRevoking}
+                className="text-amber-200 hover:text-white p-1 rounded-lg hover:bg-amber-700 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              {revokeError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
+                  {revokeError}
+                </div>
+              )}
+
+              <div className="text-center py-2">
+                <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
+                  <UserX size={28} />
+                </div>
+                <h4 className="font-extrabold text-lg text-gray-900">
+                  {clientToRevoke.name}
+                </h4>
+                <p className="text-xs text-gray-500 mt-1 font-mono">
+                  ইউজারনেম: <span className="font-bold text-indigo-700">{clientToRevoke.user?.username || clientToRevoke.phone}</span>
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5 font-medium">
+                <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                  <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                  <span>সতর্কবার্তা:</span>
+                </p>
+                <p>
+                  আপনি কি নিশ্চিতভাবে এই প্রতিষ্ঠানের পোর্টাল লগইন অ্যাক্সেস বাতিল করতে চান?
+                </p>
+                <p className="text-[11px] text-amber-700">
+                  লগইন বাতিল করলে এই প্রতিষ্ঠান আর সিস্টেমে লগইন করতে পারবে না। প্রতিষ্ঠানের আগের সমস্ত লেনদেন ও চালান অপরিবর্তিত থাকবে। প্রয়োজনে পরবর্তীতে যেকোনো সময় পুনরায় নতুন লগইন দেওয়া যাবে।
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  disabled={isRevoking}
+                  onClick={() => setClientToRevoke(null)}
+                  className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  না, রাখুন (Cancel)
+                </button>
+                <button
+                  type="button"
+                  disabled={isRevoking}
+                  onClick={handleRevokeLogin}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 active:scale-95 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <UserX size={16} />
+                  <span>{isRevoking ? "বাতিল করা হচ্ছে..." : "হ্যাঁ, অ্যাক্সেস বাতিল করুন"}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

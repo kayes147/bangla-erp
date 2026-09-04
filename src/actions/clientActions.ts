@@ -296,6 +296,53 @@ export async function createClientLogin(data: {
   }
 }
 
+export async function revokeClientLogin(clientId: string) {
+  try {
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: { user: true },
+    });
+
+    if (!client) {
+      return { success: false, error: "প্রতিষ্ঠানটি খুঁজে পাওয়া যায়নি।" };
+    }
+
+    if (!client.user) {
+      return { success: false, error: "এই প্রতিষ্ঠানের কোনো সক্রিয় লগইন অ্যাকাউন্ট নেই।" };
+    }
+
+    const username = client.user.username;
+
+    // Delete the login user account
+    await prisma.user.delete({
+      where: { id: client.user.id },
+    });
+
+    revalidatePath("/clients");
+
+    try {
+      await recordAuditLog(
+        "owner",
+        "REVOKE_CLIENT_LOGIN",
+        `Revoked login access (${username}) for company '${client.name}'`
+      );
+    } catch (aErr) {
+      console.warn("Audit log warning:", aErr);
+    }
+
+    return {
+      success: true,
+      message: "প্রতিষ্ঠানের লগইন অ্যাক্সেস সফলভাবে বাতিল (Revoke) করা হয়েছে!",
+    };
+  } catch (error: any) {
+    console.error("Error revoking client login:", error);
+    return {
+      success: false,
+      error: error?.message || "লগইন অ্যাক্সেস বাতিল করতে ব্যর্থ হয়েছে।",
+    };
+  }
+}
+
 import { createInvoice } from "./invoiceActions";
 
 export async function submitClientProductOutRequest(data: {
