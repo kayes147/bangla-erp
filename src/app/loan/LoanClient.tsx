@@ -329,6 +329,7 @@ export default function LoanClient({
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="p-4 font-bold text-gray-700 w-12 text-center"># <span className="text-[10px] font-normal text-gray-400 block uppercase">(SL)</span></th>
                 <th className="p-4 font-bold text-gray-700">প্রতিষ্ঠানের নাম <span className="text-[10px] font-normal text-gray-400 block uppercase">(Company Name)</span></th>
                 <th className="p-4 font-bold text-gray-700">বকেয়ার ধরন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Due Type)</span></th>
                 <th className="p-4 font-bold text-gray-700">বাকি শুরুর তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Due Start Date)</span></th>
@@ -340,16 +341,26 @@ export default function LoanClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredEntries.map((item) => {
+              {filteredEntries.map((item, index) => {
                 const isOverdue = item.dueDate && new Date(item.dueDate) < now;
                 const isDueSoon = item.dueDate && !isOverdue && new Date(item.dueDate) <= threeDaysFromNow;
 
                 return (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    {/* Count / SL */}
+                    <td className="p-4 text-center font-extrabold text-gray-400 text-xs">
+                      {index + 1}
+                    </td>
+
                     {/* Party */}
                     <td className="p-4">
-                      <div className="font-bold text-gray-900">{item.clientName}</div>
-                      <div className="text-xs text-gray-500">{item.clientPhone || "ফোন নেই"}</div>
+                      <div className="flex items-center space-x-2">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black shrink-0">
+                          {index + 1}
+                        </span>
+                        <span className="font-bold text-gray-900">{item.clientName}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 pl-7">{item.clientPhone || "ফোন নেই"}</div>
                     </td>
 
                     {/* Due Type */}
@@ -451,7 +462,7 @@ export default function LoanClient({
 
               {filteredEntries.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-12 text-center text-gray-400">
+                  <td colSpan={9} className="p-12 text-center text-gray-400">
                     <CheckCircle2 size={36} className="mx-auto mb-2 text-emerald-400 opacity-80" />
                     <p className="font-bold text-gray-600">কোনো বকেয়া পাওয়া যায়নি!</p>
                     <p className="text-xs text-gray-400 mt-1">সব বকেয়া পরিশোধিত অথবা সার্চের সাথে মেলেনি।</p>

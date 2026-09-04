@@ -18,7 +18,13 @@ export default async function Clients() {
             <Users size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">প্রতিষ্ঠান তালিকা <span className="text-lg font-normal text-gray-500">(Company List)</span></h1>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <span>প্রতিষ্ঠান তালিকা</span>
+              <span className="text-xs font-black bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                {clients?.length || 0} টি
+              </span>
+              <span className="text-lg font-normal text-gray-500">(Company List)</span>
+            </h1>
             <p className="text-sm text-gray-500 mt-1">আপনার ব্যবসার সকল প্রতিষ্ঠানদের প্রোফাইল ও বাকির হিসাব।</p>
           </div>
         </div>

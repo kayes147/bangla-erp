@@ -290,7 +290,8 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
         <table className="w-full text-left text-sm text-gray-600">
           <thead className="bg-white border-b border-gray-100">
             <tr>
-              <th className="p-4 font-bold text-gray-700">নাম <span className="text-[10px] font-normal text-gray-400 block uppercase">(Name)</span></th>
+              <th className="p-4 font-bold text-gray-700 w-12 text-center"># <span className="text-[10px] font-normal text-gray-400 block uppercase">(SL)</span></th>
+              <th className="p-4 font-bold text-gray-700">প্রতিষ্ঠানের নাম <span className="text-[10px] font-normal text-gray-400 block uppercase">(Company Name)</span></th>
               <th className="p-4 font-bold text-gray-700">মোবাইল <span className="text-[10px] font-normal text-gray-400 block uppercase">(Phone)</span></th>
               <th className="p-4 font-bold text-gray-700">ধরন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Type)</span></th>
               <th className="p-4 font-bold text-gray-700">লগইন অ্যাক্সেস <span className="text-[10px] font-normal text-gray-400 block uppercase">(Login Access)</span></th>
@@ -299,12 +300,22 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filteredClients.map((client) => (
+            {filteredClients.map((client, index) => (
               <tr key={client.id} className="hover:bg-gray-50 transition-colors">
+                {/* Count / SL */}
+                <td className="p-4 text-center font-extrabold text-gray-400 text-xs">
+                  {index + 1}
+                </td>
+
                 {/* Name and Address */}
                 <td className="p-4">
-                  <p className="font-bold text-gray-900">{client.name}</p>
-                  <p className="text-xs text-gray-500 font-medium">{client.address || "ঠিকানা নেই"}</p>
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-black border border-indigo-200 shrink-0">
+                      {index + 1}
+                    </span>
+                    <p className="font-bold text-gray-900">{client.name}</p>
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium pl-7">{client.address || "ঠিকানা নেই"}</p>
                 </td>
 
                 {/* Phone */}
@@ -420,7 +431,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
 
             {filteredClients.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-gray-400 font-medium">
+                <td colSpan={7} className="p-8 text-center text-gray-400 font-medium">
                   কোনো প্রতিষ্ঠান পাওয়া যায়নি।
                 </td>
               </tr>
