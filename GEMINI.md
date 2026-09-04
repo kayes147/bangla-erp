@@ -16,17 +16,26 @@ This document serves as the permanent persistent memory and rulebook for Antigra
 - **Super Admin:** `kayes147@` | Password: `147570pmBD@147`
 - **Business Owner:** `owner` | Password: `123` or `1234`
 - **Manager:** `manager` | Password: `123` or `1234`
-- **Client Portal:** Client Phone Number (e.g. `01954223347`) | Password: `123456`
+- **Client Portal:** Client Phone Number (e.g. `01767029281`, `01954223347`) | Password: `123456`
 
 ---
 
-## 3. Real 5 Partner Companies (Clients)
-Never delete or corrupt these 5 partner companies; their opening balances and phone numbers are real business assets:
-1. **Salim Furniture (Nayak)** — Phone: `01954223347` | Opening Due: `৳ 1,27,000`
-2. **Joynav Furniture (Sonu)** — Phone: `01737504974` | Opening Due: `৳ 21,400`
-3. **Bismilla Furniture (Khurshid)** — Phone: `01960392799` | Opening Due: `৳ 6,000`
-4. **Razzak Furniture (Takli)** — Phone: `01838375492` | Opening Due: `৳ 5,000`
-5. **Abdulla (Astana Haque)** — Phone: `01767029281` | Balance: `৳ 0`
+## 3. Real 12 Partner Companies (Clients)
+Never delete or corrupt any of these 12 real partner companies; their balances, addresses, and phone numbers are live business assets:
+1. **Milon (Nilphamari)** — Phone: `01706854229` | Address: Nilphamari | Opening Due: `৳ 3,000`
+2. **Osman Vai** — Phone: `01929300827` | Address: Kazir Hat 10no Word | Opening Due: `৳ 3,000`
+3. **Rahaman Yasin** — Phone: `01765798260` | Address: Chal Market | Opening Due: `৳ 70,000`
+4. **Anowar (Dabiganj)** — Phone: `01768926822` | Address: Dabiganj | Balance: `৳ 0`
+5. **Ahallar Dan (Ponchogor)** — Phone: `01722495817` | Address: Ponchogor | Balance: `৳ 0`
+6. **Rashal Babulu** — Phone: `01318014223` | Address: Boshuneya More | Balance: `৳ 0`
+7. **Shazzad Furniture** — Phone: `01717835381` | Address: Boshuneya More | Balance: `৳ 0`
+8. **Abdulla (Astana Haque)** — Phone: `01767029281` | Address: Astana Haque | Balance: `৳ 0` (Active Client Portal Account)
+9. **Salim Furniture (Nayak)** — Phone: `01954223347` | Address: Basic Industrial Zone | Opening Due: `৳ 1,27,000`
+10. **Razzak Furniture (Takli)** — Phone: `01838375492` | Address: Monsur more | Opening Due: `৳ 5,000`
+11. **Bismilla Furniture (Khurshid)** — Phone: `01960392799` | Address: Kazir hat 10no Word+ | Opening Due: `৳ 6,000`
+12. **Joynav Furniture (Sonu)** — Phone: `01737504974` | Address: Boshuneya More | Opening Due: `৳ 21,400`
+
+Total Due: **৳ 2,35,400**
 
 ---
 
