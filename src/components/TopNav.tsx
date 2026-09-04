@@ -16,7 +16,12 @@ import {
   Trash2, 
   Loader2,
   Phone,
-  MapPin
+  MapPin,
+  UserCheck,
+  Plus,
+  KeyRound,
+  User,
+  Check
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,7 +31,10 @@ import {
   getBusinessProfile, 
   updateBusinessProfile, 
   getUserProfile, 
-  updateUserProfilePhoto 
+  updateUserProfilePhoto,
+  getCompanyManagers,
+  saveCompanyManager,
+  updateManagerPhoto
 } from "@/actions/profileActions";
 
 export default function TopNav({
@@ -60,14 +68,25 @@ export default function TopNav({
   const [isSavingUserPhoto, setIsSavingUserPhoto] = useState(false);
   const userPhotoInputRef = useRef<HTMLInputElement>(null);
 
-  // Business Company Profile Modal
+  // Business Company & Manager Profile Modal
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
+  const [bizModalTab, setBizModalTab] = useState<"company" | "manager">("company");
   const [bizName, setBizName] = useState("");
   const [bizPhone, setBizPhone] = useState("");
   const [bizAddress, setBizAddress] = useState("");
   const [bizLogo, setBizLogo] = useState<string | null>(null);
   const [isSavingBiz, setIsSavingBiz] = useState(false);
   const bizLogoInputRef = useRef<HTMLInputElement>(null);
+
+  // Manager state in modal
+  const [managersList, setManagersList] = useState<any[]>([]);
+  const [isLoadingManagers, setIsLoadingManagers] = useState(false);
+  const [isAddingManager, setIsAddingManager] = useState(false);
+  const [editingManagerId, setEditingManagerId] = useState<string | null>(null);
+  const [mgrUsername, setMgrUsername] = useState("");
+  const [mgrPassword, setMgrPassword] = useState("");
+  const [mgrImage, setMgrImage] = useState<string | null>(null);
+  const [isSavingManager, setIsSavingManager] = useState(false);
 
   // Load User and Business Profile on mount
   useEffect(() => {
@@ -108,19 +127,98 @@ export default function TopNav({
     };
   }, [userName]);
 
+  const fetchManagers = async () => {
+    setIsLoadingManagers(true);
+    try {
+      const res = await getCompanyManagers();
+      if (res.success && res.managers) {
+        setManagersList(res.managers);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingManagers(false);
+    }
+  };
+
   const openUserPhotoModal = () => {
     setPreviewUserPhoto(userImage);
     setIsUserPhotoModalOpen(true);
     setIsProfileOpen(false);
   };
 
-  const openBusinessModal = () => {
+  const openBusinessModal = (tab: "company" | "manager" = "company") => {
     setBizName(businessProfile?.companyName || "BOLAKA FACTORY");
     setBizPhone(businessProfile?.phone || "");
     setBizAddress(businessProfile?.address || "");
     setBizLogo(businessProfile?.logo || null);
+    setBizModalTab(tab);
+    setIsAddingManager(false);
+    setEditingManagerId(null);
+    setMgrUsername("");
+    setMgrPassword("");
+    setMgrImage(null);
     setIsBusinessModalOpen(true);
     setIsProfileOpen(false);
+    fetchManagers();
+  };
+
+  const handleUpdateManagerPhotoDirect = async (managerIdOrUsername: string, file: File) => {
+    try {
+      const compressed = await compressImageFile(file, 400, 400, 0.82);
+      const res = await updateManagerPhoto(managerIdOrUsername, compressed);
+      if (res.success) {
+        setManagersList((prev) =>
+          prev.map((m) =>
+            m.id === managerIdOrUsername || m.username === managerIdOrUsername
+              ? { ...m, image: compressed }
+              : m
+          )
+        );
+      } else {
+        alert(res.error || "ম্যানেজারের ছবি আপডেট করতে সমস্যা হয়েছে");
+      }
+    } catch (err: any) {
+      alert(err.message || "ছবি আপলোড করতে ব্যর্থ হয়েছে");
+    }
+  };
+
+  const handleSaveManager = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mgrUsername.trim()) {
+      alert("ম্যানেজার ইউজারনেম দিন!");
+      return;
+    }
+    if (!editingManagerId && (!mgrPassword || mgrPassword.length < 3)) {
+      alert("ম্যানেজারের জন্য ন্যূনতম ৩ অক্ষরের পাসওয়ার্ড দিন!");
+      return;
+    }
+
+    setIsSavingManager(true);
+    try {
+      const res = await saveCompanyManager({
+        id: editingManagerId || undefined,
+        username: mgrUsername.trim(),
+        password: mgrPassword.trim() || undefined,
+        image: mgrImage,
+      });
+
+      if (res.success) {
+        await fetchManagers();
+        setIsAddingManager(false);
+        setEditingManagerId(null);
+        setMgrUsername("");
+        setMgrPassword("");
+        setMgrImage(null);
+        alert("ম্যানেজার সফলভাবে সংরক্ষিত হয়েছে!");
+      } else {
+        alert(res.error || "ম্যানেজার সংরক্ষণ করতে ব্যর্থ হয়েছে");
+      }
+    } catch (err: any) {
+      alert(err.message || "একটি ত্রুটি ঘটেছে!");
+    } finally {
+      setIsSavingManager(false);
+    }
   };
 
   const handleUserPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -347,7 +445,7 @@ export default function TopNav({
                 </div>
 
                 {/* Owner Company Info with Edit Option */}
-                <div className="px-4 py-3 text-xs border-b border-gray-100 bg-white">
+                <div className="px-4 py-3 text-xs border-b border-gray-100 bg-white space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
                       <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 border border-gray-200 flex items-center justify-center shrink-0">
@@ -366,7 +464,7 @@ export default function TopNav({
                     </div>
                     {userRole === "OWNER" && (
                       <button
-                        onClick={openBusinessModal}
+                        onClick={() => openBusinessModal("company")}
                         className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
                         title="কোম্পানি লোগো ও তথ্য এডিট করুন"
                       >
@@ -374,6 +472,18 @@ export default function TopNav({
                       </button>
                     )}
                   </div>
+
+                  {userRole === "OWNER" && (
+                    <div className="pt-1 flex items-center justify-between gap-2 border-t border-gray-100">
+                      <button
+                        onClick={() => openBusinessModal("manager")}
+                        className="flex-1 py-1.5 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <UserCheck size={13} className="text-amber-600" />
+                        <span>ম্যানেজার প্রোফাইল ও ফটো</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Logout Option */}
@@ -494,138 +604,425 @@ export default function TopNav({
         </div>
       )}
 
-      {/* 2. OWNER COMPANY / BUSINESS PROFILE MODAL */}
+      {/* 2. OWNER COMPANY / BUSINESS PROFILE & MANAGER MODAL */}
       {isBusinessModalOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-150">
-            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-150 flex flex-col max-h-[90vh]">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
               <div className="flex items-center space-x-2">
                 <Building2 size={18} className="text-amber-400" />
-                <h3 className="font-bold text-base">মালিক কোম্পানি লোগো ও তথ্য (Owner Business Profile)</h3>
+                <h3 className="font-bold text-base">মালিক কোম্পানি ও ম্যানেজার প্রোফাইল</h3>
               </div>
               <button
                 onClick={() => setIsBusinessModalOpen(false)}
-                disabled={isSavingBiz}
+                disabled={isSavingBiz || isSavingManager}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveBusiness} className="p-6 space-y-4">
-              {/* Logo Upload Block */}
-              <div className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white border-2 border-dashed border-indigo-200 flex items-center justify-center shrink-0 shadow-2xs">
-                  {bizLogo ? (
-                    <img src={bizLogo} alt="Business Logo" className="w-full h-full object-cover" />
+            {/* Modal Tabs Header */}
+            <div className="flex border-b border-gray-200 bg-slate-50 px-4 pt-2 gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setBizModalTab("company")}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  bizModalTab === "company"
+                    ? "border-indigo-600 text-indigo-700 bg-white rounded-t-lg"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Building2 size={14} />
+                <span>কোম্পানি তথ্য ও লোগো</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBizModalTab("manager")}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  bizModalTab === "manager"
+                    ? "border-amber-600 text-amber-800 bg-white rounded-t-lg"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <UserCheck size={14} />
+                <span>ম্যানেজার প্রোফাইল ও ফটো ({managersList.length})</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto flex-1 p-6">
+              {bizModalTab === "company" ? (
+                <form onSubmit={handleSaveBusiness} className="space-y-4">
+                  {/* Logo Upload Block */}
+                  <div className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white border-2 border-dashed border-indigo-200 flex items-center justify-center shrink-0 shadow-2xs">
+                      {bizLogo ? (
+                        <img src={bizLogo} alt="Business Logo" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-slate-400">
+                          <Building2 size={28} className="text-indigo-500" />
+                          <span className="text-[10px] font-bold mt-1 text-slate-500">লোগো/ছবি</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1">
+                      <label className="block text-xs font-bold text-gray-900">
+                        কোম্পানির অফিসিয়াল লোগো / ছবি
+                      </label>
+                      <p className="text-[11px] text-gray-500">
+                        সাইডবার, হেডার এবং প্রিন্ট চালানে এই লোগোটি প্রদর্শিত হবে।
+                      </p>
+                      <div className="pt-1 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => bizLogoInputRef.current?.click()}
+                          className="px-3 py-1.5 bg-white border border-gray-300 hover:border-indigo-500 text-gray-700 hover:text-indigo-600 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+                        >
+                          <Camera size={13} />
+                          <span>{bizLogo ? "লোগো পরিবর্তন" : "লোগো আপলোড"}</span>
+                        </button>
+                        {bizLogo && (
+                          <button
+                            type="button"
+                            onClick={() => setBizLogo(null)}
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                            title="লোগো বাদ দিন"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                        <input
+                          ref={bizLogoInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleBizLogoChange}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Company Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      কোম্পানির নাম (Business Name) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={bizName}
+                      onChange={(e) => setBizName(e.target.value)}
+                      placeholder="BOLAKA FACTORY"
+                      className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-gray-900"
+                      required
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      অফিসিয়াল মোবাইল / ফোন
+                    </label>
+                    <input
+                      type="tel"
+                      value={bizPhone}
+                      onChange={(e) => setBizPhone(e.target.value)}
+                      placeholder="01954223347"
+                      className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-gray-900"
+                    />
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      ঠিকানা
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={bizAddress}
+                      onChange={(e) => setBizAddress(e.target.value)}
+                      placeholder="যেমন: ঢাকা, বাংলাদেশ"
+                      className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-gray-900"
+                    />
+                  </div>
+
+                  {/* Modal Save/Cancel Footer */}
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => setIsBusinessModalOpen(false)}
+                      disabled={isSavingBiz}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      বাতিল
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSavingBiz}
+                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingBiz ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                      <span>{isSavingBiz ? "সংরক্ষণ হচ্ছে..." : "কোম্পানি তথ্য সেভ করুন"}</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* MANAGER TAB */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900">ম্যানেজার তালিকা ও প্রোফাইল ফটো</h4>
+                      <p className="text-xs text-gray-500">ম্যানেজারের ছবি পরিবর্তন বা নতুন ম্যানেজার যোগ করুন</p>
+                    </div>
+                    {!isAddingManager && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingManagerId(null);
+                          setMgrUsername("");
+                          setMgrPassword("");
+                          setMgrImage(null);
+                          setIsAddingManager(true);
+                        }}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                      >
+                        <Plus size={14} />
+                        <span>নতুন ম্যানেজার যোগ করুন</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Add / Edit Manager Form */}
+                  {isAddingManager && (
+                    <form onSubmit={handleSaveManager} className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-900">
+                          {editingManagerId ? "ম্যানেজার এডিট / পাসওয়ার্ড পরিবর্তন" : "নতুন ম্যানেজার তৈরি করুন"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddingManager(false);
+                            setEditingManagerId(null);
+                          }}
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      {/* Photo Upload */}
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-14 h-14 rounded-full overflow-hidden bg-white border-2 border-dashed border-amber-300 flex items-center justify-center shrink-0 shadow-2xs">
+                            {mgrImage ? (
+                              <img src={mgrImage} alt="Manager" className="w-full h-full object-cover" />
+                            ) : (
+                              <User size={24} className="text-amber-500" />
+                            )}
+                          </div>
+                          {mgrImage && (
+                            <button
+                              type="button"
+                              onClick={() => setMgrImage(null)}
+                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
+                            >
+                              <X size={10} />
+                            </button>
+                          )}
+                        </div>
+                        <div>
+                          <label className="px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 cursor-pointer inline-flex items-center gap-1 shadow-2xs">
+                            <Camera size={12} className="text-amber-600" />
+                            <span>{mgrImage ? "ছবি পরিবর্তন" : "প্রোফাইল ছবি দিন"}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const comp = await compressImageFile(file, 400, 400, 0.82);
+                                    setMgrImage(comp);
+                                  } catch (err: any) {
+                                    alert(err.message || "ছবি আপলোড সমস্যা");
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                          <p className="text-[10px] text-gray-500 mt-0.5">ম্যানেজারের প্রোফাইল ফটো (ঐচ্ছিক)</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            ইউজারনেম <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={mgrUsername}
+                            onChange={(e) => setMgrUsername(e.target.value)}
+                            disabled={!!editingManagerId}
+                            placeholder="যেমন: manager2"
+                            className="w-full p-2 text-xs border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 bg-white font-medium"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            {editingManagerId ? "নতুন পাসওয়ার্ড (ঐচ্ছিক)" : "পাসওয়ার্ড (ন্যূনতম ৩ অক্ষর)"} {!editingManagerId && <span className="text-red-500">*</span>}
+                          </label>
+                          <input
+                            type="password"
+                            value={mgrPassword}
+                            onChange={(e) => setMgrPassword(e.target.value)}
+                            placeholder={editingManagerId ? "পরিবর্তন না করলে খালি রাখুন" : "পাসওয়ার্ড লিখুন"}
+                            className="w-full p-2 text-xs border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 bg-white font-medium"
+                            required={!editingManagerId}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddingManager(false);
+                            setEditingManagerId(null);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-xl text-xs font-bold cursor-pointer"
+                        >
+                          বাতিল
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSavingManager}
+                          className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          {isSavingManager ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                          <span>{isSavingManager ? "সেভ হচ্ছে..." : "ম্যানেজার সংরক্ষণ করুন"}</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Managers List */}
+                  {isLoadingManagers ? (
+                    <div className="py-8 flex flex-col items-center justify-center text-gray-400">
+                      <Loader2 size={24} className="animate-spin text-amber-600 mb-2" />
+                      <span className="text-xs">ম্যানেজার তালিকা লোড হচ্ছে...</span>
+                    </div>
+                  ) : managersList.length === 0 ? (
+                    <div className="p-6 text-center border-2 border-dashed border-gray-200 rounded-2xl space-y-2 bg-slate-50">
+                      <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+                        <UserCheck size={24} />
+                      </div>
+                      <h5 className="text-sm font-bold text-gray-800">কোনো ম্যানেজার অ্যাকাউন্ট নেই</h5>
+                      <p className="text-xs text-gray-500 max-w-xs mx-auto">
+                        সাইন-আপের সময় ম্যানেজার যুক্ত করা না হলেও আপনি এখান থেকে যেকোনো সময় নতুন ম্যানেজার তৈরি করতে পারেন।
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingManagerId(null);
+                          setMgrUsername("");
+                          setMgrPassword("");
+                          setMgrImage(null);
+                          setIsAddingManager(true);
+                        }}
+                        className="mt-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer"
+                      >
+                        + এখনই ম্যানেজার যোগ করুন
+                      </button>
+                    </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center text-slate-400">
-                      <Building2 size={28} className="text-indigo-500" />
-                      <span className="text-[10px] font-bold mt-1 text-slate-500">লোগো/ছবি</span>
+                    <div className="space-y-2.5">
+                      {managersList.map((m) => (
+                        <div
+                          key={m.id}
+                          className="p-3 bg-white border border-gray-200 rounded-2xl flex items-center justify-between gap-3 shadow-2xs hover:border-amber-300 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Avatar with Camera update button */}
+                            <div className="relative group shrink-0">
+                              <div className="w-11 h-11 rounded-full overflow-hidden bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-xs border border-gray-200">
+                                {m.image ? (
+                                  <img src={m.image} alt={m.username} className="w-full h-full object-cover" />
+                                ) : (
+                                  m.username.charAt(0).toUpperCase()
+                                )}
+                              </div>
+                              <label
+                                className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-600 hover:bg-amber-700 text-white rounded-full flex items-center justify-center shadow-xs cursor-pointer"
+                                title="ম্যানেজারের ছবি পরিবর্তন করুন"
+                              >
+                                <Camera size={10} />
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleUpdateManagerPhotoDirect(m.id, file);
+                                  }}
+                                />
+                              </label>
+                            </div>
+
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-gray-900">{m.username}</span>
+                                <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.2 rounded">
+                                  ম্যানেজার
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                অ্যাকাউন্ট তৈরি: {new Date(m.createdAt).toLocaleDateString("bn-BD")}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <label className="px-2.5 py-1 bg-gray-50 hover:bg-amber-50 border border-gray-200 hover:border-amber-300 text-gray-700 hover:text-amber-800 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1">
+                              <Camera size={12} className="text-amber-600" />
+                              <span className="hidden sm:inline">ছবি বদলান</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleUpdateManagerPhotoDirect(m.id, file);
+                                }}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingManagerId(m.id);
+                                setMgrUsername(m.username);
+                                setMgrPassword("");
+                                setMgrImage(m.image || null);
+                                setIsAddingManager(true);
+                              }}
+                              className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                              title="পাসওয়ার্ড পরিবর্তন করুন"
+                            >
+                              <KeyRound size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-
-                <div className="flex-1 space-y-1">
-                  <label className="block text-xs font-bold text-gray-900">
-                    কোম্পানির অফিসিয়াল লোগো / ছবি
-                  </label>
-                  <p className="text-[11px] text-gray-500">
-                    সাইডবার, হেডার এবং প্রিন্ট চালানে এই লোগোটি প্রদর্শিত হবে।
-                  </p>
-                  <div className="pt-1 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => bizLogoInputRef.current?.click()}
-                      className="px-3 py-1.5 bg-white border border-gray-300 hover:border-indigo-500 text-gray-700 hover:text-indigo-600 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer"
-                    >
-                      <Camera size={13} />
-                      <span>{bizLogo ? "লোগো পরিবর্তন" : "লোগো আপলোড"}</span>
-                    </button>
-                    {bizLogo && (
-                      <button
-                        type="button"
-                        onClick={() => setBizLogo(null)}
-                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                        title="লোগো বাদ দিন"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                    <input
-                      ref={bizLogoInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleBizLogoChange}
-                      className="hidden"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Company Name */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  কোম্পানির নাম (Business Name) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={bizName}
-                  onChange={(e) => setBizName(e.target.value)}
-                  placeholder="BOLAKA FACTORY"
-                  className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-gray-900"
-                  required
-                />
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  অফিসিয়াল মোবাইল / ফোন
-                </label>
-                <input
-                  type="tel"
-                  value={bizPhone}
-                  onChange={(e) => setBizPhone(e.target.value)}
-                  placeholder="01954223347"
-                  className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-gray-900"
-                />
-              </div>
-
-              {/* Address */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  ঠিকানা
-                </label>
-                <textarea
-                  rows={2}
-                  value={bizAddress}
-                  onChange={(e) => setBizAddress(e.target.value)}
-                  placeholder="যেমন: ঢাকা, বাংলাদেশ"
-                  className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-gray-900"
-                />
-              </div>
-
-              {/* Modal Save/Cancel Footer */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setIsBusinessModalOpen(false)}
-                  disabled={isSavingBiz}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                >
-                  বাতিল
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingBiz}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  {isSavingBiz ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  <span>{isSavingBiz ? "সংরক্ষণ হচ্ছে..." : "কোম্পানি তথ্য সেভ করুন"}</span>
-                </button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -122,3 +122,112 @@ export async function getUserProfile(username: string) {
     return { success: false, user: null };
   }
 }
+
+export async function getCompanyManagers() {
+  try {
+    const managers = await prisma.user.findMany({
+      where: { role: "MANAGER" },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        image: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return { success: true, managers };
+  } catch (error: any) {
+    console.error("Error fetching managers:", error);
+    return { success: false, managers: [] };
+  }
+}
+
+export async function saveCompanyManager(data: {
+  id?: string;
+  username: string;
+  password?: string;
+  image?: string | null;
+}) {
+  try {
+    const cleanUsername = data.username.toLowerCase().trim();
+    if (!cleanUsername) {
+      return { success: false, error: "ম্যানেজার ইউজারনেম আবশ্যক!" };
+    }
+
+    // Dynamic import of bcrypt to keep bundle light
+    const bcrypt = await import("bcryptjs");
+
+    if (data.id) {
+      // Update existing manager
+      const updateData: any = {};
+      if (data.image !== undefined) updateData.image = data.image;
+      if (data.password && data.password.trim().length >= 3) {
+        updateData.password = await bcrypt.hash(data.password.trim(), 10);
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: data.id },
+        data: updateData,
+        select: { id: true, username: true, role: true, image: true },
+      });
+
+      return { success: true, manager: updated };
+    } else {
+      // Create new manager
+      if (!data.password || data.password.trim().length < 3) {
+        return { success: false, error: "ম্যানেজারের জন্য ন্যূনতম ৩ অক্ষরের পাসওয়ার্ড দিন!" };
+      }
+
+      const existing = await prisma.user.findUnique({
+        where: { username: cleanUsername },
+      });
+      if (existing) {
+        return { success: false, error: `ইউজারনেম "${cleanUsername}" ইতিমধ্যে ব্যবহৃত হয়েছে!` };
+      }
+
+      const hashedPassword = await bcrypt.hash(data.password.trim(), 10);
+      const newManager = await prisma.user.create({
+        data: {
+          username: cleanUsername,
+          password: hashedPassword,
+          role: "MANAGER",
+          image: data.image || null,
+        },
+        select: { id: true, username: true, role: true, image: true },
+      });
+
+      return { success: true, manager: newManager };
+    }
+  } catch (error: any) {
+    console.error("Error saving company manager:", error);
+    return { success: false, error: error?.message || "ম্যানেজার সংরক্ষণ করতে ব্যর্থ হয়েছে" };
+  }
+}
+
+export async function updateManagerPhoto(managerIdOrUsername: string, image: string | null) {
+  try {
+    const clean = managerIdOrUsername.toLowerCase().trim();
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ id: managerIdOrUsername }, { username: clean }],
+        role: "MANAGER",
+      },
+    });
+
+    if (!user) {
+      return { success: false, error: "ম্যানেজার পাওয়া যায়নি!" };
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { image },
+      select: { id: true, username: true, role: true, image: true },
+    });
+
+    return { success: true, manager: updated };
+  } catch (error: any) {
+    console.error("Error updating manager photo:", error);
+    return { success: false, error: error?.message || "ম্যানেজার ছবি আপডেট করতে ব্যর্থ হয়েছে" };
+  }
+}
