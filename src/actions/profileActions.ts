@@ -39,6 +39,7 @@ export async function getBusinessProfile() {
 
 export async function updateBusinessProfile(data: {
   companyName?: string;
+  ownerName?: string | null;
   phone?: string | null;
   address?: string | null;
   logo?: string | null;
@@ -49,6 +50,7 @@ export async function updateBusinessProfile(data: {
       where: { id: "default" },
       update: {
         ...(data.companyName !== undefined && { companyName: data.companyName }),
+        ...(data.ownerName !== undefined && { ownerName: data.ownerName }),
         ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.address !== undefined && { address: data.address }),
         ...(data.logo !== undefined && { logo: data.logo }),
@@ -57,6 +59,7 @@ export async function updateBusinessProfile(data: {
       create: {
         id: "default",
         companyName: data.companyName || "BOLAKA FACTORY",
+        ownerName: data.ownerName || "Hasibul Islam",
         phone: data.phone || "01954223347",
         address: data.address || "ঢাকা, বাংলাদেশ",
         logo: data.logo || null,
@@ -229,5 +232,39 @@ export async function updateManagerPhoto(managerIdOrUsername: string, image: str
   } catch (error: any) {
     console.error("Error updating manager photo:", error);
     return { success: false, error: error?.message || "ম্যানেজার ছবি আপডেট করতে ব্যর্থ হয়েছে" };
+  }
+}
+
+export async function deleteCompanyManager(managerId: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: managerId },
+    });
+
+    if (!user) {
+      return { success: false, error: "ম্যানেজার পাওয়া যায়নি!" };
+    }
+
+    if (user.role !== "MANAGER") {
+      return { success: false, error: "শুধুমাত্র ম্যানেজার অ্যাকাউন্ট মুছে ফেলা যাবে!" };
+    }
+
+    // Safely delete any audit logs linked to this manager
+    await prisma.auditLog.deleteMany({
+      where: { userId: managerId },
+    });
+
+    await prisma.user.delete({
+      where: { id: managerId },
+    });
+
+    try {
+      revalidatePath("/");
+    } catch (e) {}
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting manager:", error);
+    return { success: false, error: error?.message || "ম্যানেজার মুছে ফেলতে ব্যর্থ হয়েছে" };
   }
 }

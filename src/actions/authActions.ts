@@ -93,6 +93,7 @@ export async function registerUser(data: {
       where: { id: "default" },
       update: {
         companyName: finalCompanyName,
+        ownerName: data.name?.trim() || "Hasibul Islam",
         ...(data.companyPhone !== undefined && { phone: data.companyPhone }),
         ...(data.companyAddress !== undefined && { address: data.companyAddress }),
         ...(data.companyEmail !== undefined && { email: data.companyEmail }),
@@ -102,6 +103,7 @@ export async function registerUser(data: {
       create: {
         id: "default",
         companyName: finalCompanyName,
+        ownerName: data.name?.trim() || "Hasibul Islam",
         phone: data.companyPhone || null,
         address: data.companyAddress || null,
         email: data.companyEmail || null,

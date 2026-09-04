@@ -34,7 +34,8 @@ import {
   updateUserProfilePhoto,
   getCompanyManagers,
   saveCompanyManager,
-  updateManagerPhoto
+  updateManagerPhoto,
+  deleteCompanyManager
 } from "@/actions/profileActions";
 
 export default function TopNav({
@@ -70,13 +71,16 @@ export default function TopNav({
 
   // Business Company & Manager Profile Modal
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
-  const [bizModalTab, setBizModalTab] = useState<"company" | "manager">("company");
+  const [bizModalTab, setBizModalTab] = useState<"company" | "owner" | "manager">("company");
   const [bizName, setBizName] = useState("");
+  const [bizOwnerName, setBizOwnerName] = useState("");
+  const [bizOwnerPhoto, setBizOwnerPhoto] = useState<string | null>(null);
   const [bizPhone, setBizPhone] = useState("");
   const [bizAddress, setBizAddress] = useState("");
   const [bizLogo, setBizLogo] = useState<string | null>(null);
   const [isSavingBiz, setIsSavingBiz] = useState(false);
   const bizLogoInputRef = useRef<HTMLInputElement>(null);
+  const bizOwnerPhotoInputRef = useRef<HTMLInputElement>(null);
 
   // Manager state in modal
   const [managersList, setManagersList] = useState<any[]>([]);
@@ -87,6 +91,7 @@ export default function TopNav({
   const [mgrPassword, setMgrPassword] = useState("");
   const [mgrImage, setMgrImage] = useState<string | null>(null);
   const [isSavingManager, setIsSavingManager] = useState(false);
+  const [deletingManagerId, setDeletingManagerId] = useState<string | null>(null);
 
   // Load User and Business Profile on mount
   useEffect(() => {
@@ -147,8 +152,10 @@ export default function TopNav({
     setIsProfileOpen(false);
   };
 
-  const openBusinessModal = (tab: "company" | "manager" = "company") => {
+  const openBusinessModal = (tab: "company" | "owner" | "manager" = "company") => {
     setBizName(businessProfile?.companyName || "BOLAKA FACTORY");
+    setBizOwnerName(businessProfile?.ownerName || userName || "Hasibul Islam");
+    setBizOwnerPhoto(businessProfile?.ownerPhoto || userImage || null);
     setBizPhone(businessProfile?.phone || "");
     setBizAddress(businessProfile?.address || "");
     setBizLogo(businessProfile?.logo || null);
@@ -161,6 +168,26 @@ export default function TopNav({
     setIsBusinessModalOpen(true);
     setIsProfileOpen(false);
     fetchManagers();
+  };
+
+  const handleDeleteManager = async (managerId: string, managerUsername: string) => {
+    const ok = window.confirm(`আপনি কি নিশ্চিতভাবে ম্যানেজার "${managerUsername}" অ্যাকাউন্টটি স্থায়ীভাবে মুছে ফেলতে চান?`);
+    if (!ok) return;
+
+    setDeletingManagerId(managerId);
+    try {
+      const res = await deleteCompanyManager(managerId);
+      if (res.success) {
+        setManagersList((prev) => prev.filter((m) => m.id !== managerId));
+        alert(`ম্যানেজার "${managerUsername}" সফলভাবে মুছে ফেলা হয়েছে!`);
+      } else {
+        alert(res.error || "ম্যানেজার মুছে ফেলতে সমস্যা হয়েছে");
+      }
+    } catch (err: any) {
+      alert(err.message || "একটি ত্রুটি ঘটেছে");
+    } finally {
+      setDeletingManagerId(null);
+    }
   };
 
   const handleUpdateManagerPhotoDirect = async (managerIdOrUsername: string, file: File) => {
@@ -261,19 +288,36 @@ export default function TopNav({
     }
   };
 
+  const handleOwnerPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file);
+      setBizOwnerPhoto(compressed);
+    } catch (err: any) {
+      alert(err.message || "মালিকের ছবি আপলোড করতে সমস্যা হয়েছে");
+    }
+  };
+
   const handleSaveBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingBiz(true);
     try {
       const res = await updateBusinessProfile({
         companyName: bizName.trim() || "BOLAKA FACTORY",
+        ownerName: bizOwnerName.trim() || null,
         phone: bizPhone.trim() || null,
         address: bizAddress.trim() || null,
         logo: bizLogo,
+        ownerPhoto: bizOwnerPhoto,
       });
 
       if (res.success && res.profile) {
         setBusinessProfile(res.profile);
+        if (bizOwnerPhoto && userRole === "OWNER") {
+          setUserImage(bizOwnerPhoto);
+          await updateUserProfilePhoto(userName, bizOwnerPhoto);
+        }
         try {
           localStorage.setItem("erp_business_logo", res.profile.logo || "");
           localStorage.setItem("erp_business_name", res.profile.companyName || "BOLAKA FACTORY");
@@ -474,13 +518,20 @@ export default function TopNav({
                   </div>
 
                   {userRole === "OWNER" && (
-                    <div className="pt-1 flex items-center justify-between gap-2 border-t border-gray-100">
+                    <div className="pt-2 grid grid-cols-2 gap-1.5 border-t border-gray-100">
+                      <button
+                        onClick={() => openBusinessModal("owner")}
+                        className="py-1.5 px-2 bg-purple-50 hover:bg-purple-100 text-purple-900 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <User size={12} className="text-purple-600" />
+                        <span>👑 মালিকের তথ্য</span>
+                      </button>
                       <button
                         onClick={() => openBusinessModal("manager")}
-                        className="flex-1 py-1.5 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        className="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
                       >
-                        <UserCheck size={13} className="text-amber-600" />
-                        <span>ম্যানেজার প্রোফাইল ও ফটো</span>
+                        <UserCheck size={12} className="text-amber-600" />
+                        <span>👤 ম্যানেজার</span>
                       </button>
                     </div>
                   )}
@@ -623,31 +674,44 @@ export default function TopNav({
             </div>
 
             {/* Modal Tabs Header */}
-            <div className="flex border-b border-gray-200 bg-slate-50 px-4 pt-2 gap-2 shrink-0">
+            <div className="flex border-b border-gray-200 bg-slate-50 px-4 pt-2 gap-2 shrink-0 overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setBizModalTab("company")}
-                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
                   bizModalTab === "company"
                     ? "border-indigo-600 text-indigo-700 bg-white rounded-t-lg"
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
                 <Building2 size={14} />
-                <span>কোম্পানি তথ্য ও লোগো</span>
+                <span>🏢 কোম্পানি তথ্য ও লোগো</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBizModalTab("owner")}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  bizModalTab === "owner"
+                    ? "border-purple-600 text-purple-700 bg-white rounded-t-lg"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <User size={14} />
+                <span>👑 মালিকের তথ্য ও ছবি</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setBizModalTab("manager")}
-                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
                   bizModalTab === "manager"
                     ? "border-amber-600 text-amber-800 bg-white rounded-t-lg"
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
                 <UserCheck size={14} />
-                <span>ম্যানেজার প্রোফাইল ও ফটো ({managersList.length})</span>
+                <span>👤 ম্যানেজার ({managersList.length})</span>
               </button>
             </div>
 
@@ -765,6 +829,101 @@ export default function TopNav({
                     >
                       {isSavingBiz ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                       <span>{isSavingBiz ? "সংরক্ষণ হচ্ছে..." : "কোম্পানি তথ্য সেভ করুন"}</span>
+                    </button>
+                  </div>
+                </form>
+              ) : bizModalTab === "owner" ? (
+                <form onSubmit={handleSaveBusiness} className="space-y-4">
+                  {/* Owner Photo Block */}
+                  <div className="flex items-center gap-4 p-4 bg-purple-50/60 border border-purple-200 rounded-2xl">
+                    <div className="relative w-20 h-20 rounded-full overflow-hidden bg-white border-2 border-dashed border-purple-300 flex items-center justify-center shrink-0 shadow-2xs">
+                      {bizOwnerPhoto ? (
+                        <img src={bizOwnerPhoto} alt="Owner" className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={32} className="text-purple-500" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1">
+                      <label className="block text-xs font-bold text-gray-900">
+                        মালিকের নিজস্ব ছবি (Owner Profile Photo)
+                      </label>
+                      <p className="text-[11px] text-gray-500">
+                        সফটওয়্যারের শীর্ষ নেভিগেশন বার ও প্রোফাইলে প্রদর্শিত হবে।
+                      </p>
+                      <div className="pt-1 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => bizOwnerPhotoInputRef.current?.click()}
+                          className="px-3 py-1.5 bg-white border border-gray-300 hover:border-purple-500 text-gray-700 hover:text-purple-600 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+                        >
+                          <Camera size={13} />
+                          <span>{bizOwnerPhoto ? "ছবি পরিবর্তন" : "ছবি আপলোড"}</span>
+                        </button>
+                        {bizOwnerPhoto && (
+                          <button
+                            type="button"
+                            onClick={() => setBizOwnerPhoto(null)}
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                            title="ছবি বাদ দিন"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                        <input
+                          ref={bizOwnerPhotoInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleOwnerPhotoChange}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Owner Full Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      মালিকের পূর্ণ নাম (Owner Name) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={bizOwnerName}
+                      onChange={(e) => setBizOwnerName(e.target.value)}
+                      placeholder="যেমন: হাসিবুল ইসলাম"
+                      className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 font-bold text-sm text-gray-900"
+                      required
+                    />
+                  </div>
+
+                  {/* Owner Account Identity */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-slate-700 block">লগইন ইউজারনেম:</span>
+                      <span className="text-sm font-black text-slate-900">{userName}</span>
+                    </div>
+                    <span className="text-xs bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">
+                      প্রধান মালিক (Primary Owner)
+                    </span>
+                  </div>
+
+                  {/* Modal Save/Cancel Footer */}
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => setIsBusinessModalOpen(false)}
+                      disabled={isSavingBiz}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      বাতিল
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSavingBiz}
+                      className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingBiz ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                      <span>{isSavingBiz ? "সংরক্ষণ হচ্ছে..." : "মালিকের তথ্য সেভ করুন"}</span>
                     </button>
                   </div>
                 </form>
@@ -1014,6 +1173,19 @@ export default function TopNav({
                               title="পাসওয়ার্ড পরিবর্তন করুন"
                             >
                               <KeyRound size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteManager(m.id, m.username)}
+                              disabled={deletingManagerId === m.id}
+                              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="ম্যানেজার মুছে ফেলুন (Remove Manager)"
+                            >
+                              {deletingManagerId === m.id ? (
+                                <Loader2 size={15} className="animate-spin text-red-600" />
+                              ) : (
+                                <Trash2 size={15} />
+                              )}
                             </button>
                           </div>
                         </div>

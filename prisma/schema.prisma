@@ -237,6 +237,7 @@ model BackupVault {
 model BusinessProfile {
   id          String   @id @default("default")
   companyName String   @default("BOLAKA FACTORY")
+  ownerName   String?  @default("Hasibul Islam")
   phone       String?
   email       String?
   address     String?
