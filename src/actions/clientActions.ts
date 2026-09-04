@@ -223,14 +223,59 @@ export async function getClients() {
       orderBy: { createdAt: "desc" },
       include: {
         user: true, // to check if they have login access
-        invoices: true,
-      }
+        invoices: {
+          orderBy: { date: "desc" },
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+        transactions: {
+          orderBy: { date: "desc" },
+        },
+      },
     });
 
     return { success: true, clients };
   } catch (error) {
     console.error("Error fetching clients:", error);
     return { success: false, error: "Failed to fetch clients", clients: [] };
+  }
+}
+
+export async function getClientDetails(clientId: string) {
+  try {
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: {
+        user: true,
+        invoices: {
+          orderBy: { date: "desc" },
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+        transactions: {
+          orderBy: { date: "desc" },
+        },
+      },
+    });
+
+    if (!client) {
+      return { success: false, error: "প্রতিষ্ঠানটি খুঁজে পাওয়া যায়নি।" };
+    }
+
+    return { success: true, client };
+  } catch (error: any) {
+    console.error("Error fetching client details:", error);
+    return { success: false, error: error?.message || "Failed to fetch client details" };
   }
 }
 

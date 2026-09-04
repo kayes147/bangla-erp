@@ -20,10 +20,15 @@ import {
   AlertTriangle,
   Pencil,
   Save,
-  UserX
+  UserX,
+  Package,
+  Receipt,
+  Building2,
+  Printer
 } from "lucide-react";
 import { createClientLogin, deleteClient, updateClient, revokeClientLogin } from "@/actions/clientActions";
 import { useRouter } from "next/navigation";
+import PrintableInvoiceModal from "@/components/PrintableInvoiceModal";
 
 export default function ClientsList({ initialClients }: { initialClients: any[] }) {
   const router = useRouter();
@@ -42,6 +47,9 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
 
   // View Profile Modal State
   const [selectedClientForProfile, setSelectedClientForProfile] = useState<any | null>(null);
+  const [profileActiveTab, setProfileActiveTab] = useState<"invoices" | "transactions" | "info">("invoices");
+  const [profileInvoiceFilter, setProfileInvoiceFilter] = useState<"all" | "product_in" | "product_out">("all");
+  const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<any | null>(null);
 
   // Delete Company Modal State
   const [selectedClientForDelete, setSelectedClientForDelete] = useState<any | null>(null);
@@ -351,26 +359,39 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
 
                 {/* Current Due */}
                 <td className="p-4 font-bold text-gray-900">
-                  {client.openingBalance > 0 ? (
-                    <span className="text-green-600">
-                      ৳ {client.openingBalance.toLocaleString()}{" "}
-                      <span className="text-[10px] text-gray-400 font-normal uppercase">(Receivable)</span>
-                    </span>
-                  ) : client.openingBalance < 0 ? (
-                    <span className="text-red-600">
-                      ৳ {Math.abs(client.openingBalance).toLocaleString()}{" "}
-                      <span className="text-[10px] text-gray-400 font-normal uppercase">(Payable)</span>
-                    </span>
-                  ) : (
-                    "৳ 0"
-                  )}
+                  {(() => {
+                    const invs = client.invoices || [];
+                    const invDue = invs.reduce((sum: number, i: any) => sum + Math.max(0, (i.totalAmount || 0) - (i.paidAmount || 0)), 0);
+                    const totalClientDue = (client.openingBalance || 0) + invDue;
+                    if (totalClientDue > 0) {
+                      return (
+                        <span className="text-red-600 font-extrabold">
+                          ৳ {totalClientDue.toLocaleString()}{" "}
+                          <span className="text-[10px] text-gray-400 font-normal uppercase">(Receivable)</span>
+                        </span>
+                      );
+                    } else if (totalClientDue < 0) {
+                      return (
+                        <span className="text-blue-600 font-extrabold">
+                          ৳ {Math.abs(totalClientDue).toLocaleString()}{" "}
+                          <span className="text-[10px] text-gray-400 font-normal uppercase">(Payable)</span>
+                        </span>
+                      );
+                    } else {
+                      return <span className="text-gray-400">৳ 0</span>;
+                    }
+                  })()}
                 </td>
 
                 {/* Action Column */}
                 <td className="p-4 text-right">
                   <div className="flex items-center justify-end space-x-1.5">
                     <button
-                      onClick={() => setSelectedClientForProfile(client)}
+                      onClick={() => {
+                        setSelectedClientForProfile(client);
+                        setProfileActiveTab("invoices");
+                        setProfileInvoiceFilter("all");
+                      }}
                       className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-sm cursor-pointer mr-1"
                     >
                       View Profile
@@ -599,145 +620,593 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
         </div>
       )}
 
-      {/* VIEW PROFILE MODAL */}
-      {selectedClientForProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-150">
-            {/* Modal Header */}
-            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <UserCheck size={20} className="text-indigo-400" />
-                <h3 className="font-bold text-base">প্রতিষ্ঠান প্রোফাইল বিবরণ</h3>
-              </div>
-              <button
-                onClick={() => setSelectedClientForProfile(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {/* VIEW PROFILE & 360 LEDGER MODAL */}
+      {selectedClientForProfile && (() => {
+        const profileInvoices = selectedClientForProfile.invoices || [];
+        const profileTransactions = selectedClientForProfile.transactions || [];
 
-            {/* Profile Content */}
-            <div className="p-6 space-y-4">
-              {/* Profile Card Header */}
-              <div className="text-center pb-4 border-b border-gray-100">
-                <div className="w-16 h-16 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center font-bold text-2xl mx-auto mb-2 shadow-2xs">
-                  {selectedClientForProfile.name.charAt(0)}
-                </div>
-                <h3 className="text-lg font-bold text-gray-900">{selectedClientForProfile.name}</h3>
-                <span className="inline-block mt-1 px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-bold">
-                  প্রতিষ্ঠান (Company)
-                </span>
-              </div>
+        const totalInvoicedAmount = profileInvoices.reduce(
+          (sum: number, inv: any) => sum + (inv.totalAmount || 0),
+          0
+        );
+        const totalPaidOnInvoices = profileInvoices.reduce(
+          (sum: number, inv: any) => sum + (inv.paidAmount || 0),
+          0
+        );
+        const totalInvoiceDue = totalInvoicedAmount - totalPaidOnInvoices;
+        const openingDue = selectedClientForProfile.openingBalance || 0;
+        const netDue = openingDue + totalInvoiceDue;
 
-              {/* Information Grid */}
-              <div className="space-y-2.5 text-xs">
-                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
-                  <span className="text-gray-500 flex items-center gap-1.5 font-medium">
-                    <Phone size={14} className="text-gray-400" />
-                    মোবাইল নম্বর:
-                  </span>
-                  <a
-                    href={`tel:${selectedClientForProfile.phone}`}
-                    className="font-bold text-gray-900 hover:text-indigo-600 hover:underline"
-                  >
-                    {selectedClientForProfile.phone}
-                  </a>
-                </div>
+        const totalCashIn = profileTransactions
+          .filter((t: any) => t.type === "in")
+          .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+        const totalCashOut = profileTransactions
+          .filter((t: any) => t.type === "out")
+          .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
-                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
-                  <span className="text-gray-500 flex items-center gap-1.5 font-medium">
-                    <MapPin size={14} className="text-gray-400" />
-                    ঠিকানা:
-                  </span>
-                  <span className="font-bold text-gray-900">
-                    {selectedClientForProfile.address || "ঠিকানা দেওয়া নেই"}
-                  </span>
-                </div>
+        const filteredProfileInvoices = profileInvoices.filter((inv: any) => {
+          if (profileInvoiceFilter === "product_in") return inv.type === "product_in";
+          if (profileInvoiceFilter === "product_out") return inv.type === "product_out";
+          return true;
+        });
 
-                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
-                  <span className="text-gray-500 font-medium">বর্তমান বকেয়া:</span>
-                  <span className="font-bold text-sm text-red-600">
-                    ৳ {Math.abs(selectedClientForProfile.openingBalance || 0).toLocaleString()}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
-                  <span className="text-gray-500 font-medium">লগইন অ্যাক্সেস:</span>
-                  {selectedClientForProfile.user ? (
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-gray-900/60 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150">
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex justify-between items-center shrink-0 border-b border-slate-800">
+                <div className="flex items-center space-x-3">
+                  <div className="w-11 h-11 bg-indigo-600/40 text-indigo-300 border border-indigo-400/30 rounded-xl flex items-center justify-center font-bold text-xl shadow-inner">
+                    {selectedClientForProfile.name?.charAt(0) || "C"}
+                  </div>
+                  <div>
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                        সক্রিয় ({selectedClientForProfile.user.username})
+                      <h3 className="font-bold text-lg text-white">{selectedClientForProfile.name}</h3>
+                      <span className="px-2 py-0.5 bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[10px] font-bold rounded-full">
+                        প্রতিষ্ঠান প্রোফাইল
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const c = selectedClientForProfile;
-                          setRevokeError("");
-                          setClientToRevoke(c);
-                        }}
-                        className="text-[11px] text-red-600 hover:text-red-800 hover:underline font-bold cursor-pointer"
-                        title="লগইন অ্যাক্সেস বাতিল করুন"
-                      >
-                        বাতিল
-                      </button>
                     </div>
-                  ) : (
-                    <span className="text-gray-400 font-medium">অ্যাক্সেস তৈরি করা হয়নি</span>
-                  )}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300 mt-0.5">
+                      <span className="flex items-center gap-1">
+                        <Phone size={12} className="text-slate-400" />
+                        {selectedClientForProfile.phone}
+                      </span>
+                      {selectedClientForProfile.address && (
+                        <span className="flex items-center gap-1">
+                          <MapPin size={12} className="text-slate-400" />
+                          {selectedClientForProfile.address}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedClientForProfile(null)}
+                  className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Top Financial Stats Bar */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50 border-b border-gray-200 shrink-0">
+                {/* 1. Opening Balance */}
+                <div className="bg-white p-3 rounded-xl border border-gray-200/80 shadow-2xs">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase block">পূর্বের বকেয়া</span>
+                  <span className="text-base font-extrabold text-gray-900 block mt-0.5">
+                    ৳ {openingDue.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-gray-400">হিসাব শুরুর বকেয়া</span>
+                </div>
+
+                {/* 2. Total Invoiced Amount */}
+                <div className="bg-white p-3 rounded-xl border border-gray-200/80 shadow-2xs">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase block">মোট চালান বিল</span>
+                  <span className="text-base font-extrabold text-indigo-700 block mt-0.5">
+                    ৳ {totalInvoicedAmount.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-gray-400">{profileInvoices.length} টি চালান (ইন/আউট)</span>
+                </div>
+
+                {/* 3. Total Cash Transactions */}
+                <div className="bg-white p-3 rounded-xl border border-gray-200/80 shadow-2xs">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase block">মোট নগদ লেনদেন</span>
+                  <span className="text-base font-extrabold text-emerald-700 block mt-0.5">
+                    ৳ {totalCashIn.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-gray-400">{profileTransactions.length} টি ক্যাশ এন্ট্রি</span>
+                </div>
+
+                {/* 4. Total Outstanding Due */}
+                <div className="bg-white p-3 rounded-xl border border-red-200/80 shadow-2xs bg-red-50/30">
+                  <span className="text-[10px] font-bold text-red-600 uppercase block">বর্তমান মোট বকেয়া</span>
+                  <span className="text-lg font-black text-red-600 block mt-0.5">
+                    ৳ {netDue.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-red-500 font-bold">
+                    {netDue > 0 ? "পাওয়া যাবে (Receivable)" : netDue < 0 ? "দিতে হবে (Payable)" : "কোনো বাকি নেই"}
+                  </span>
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="pt-3 flex gap-2">
-                <a
-                  href={`tel:${selectedClientForProfile.phone}`}
-                  className="flex-1 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1"
+              {/* Navigation Tabs */}
+              <div className="flex border-b border-gray-200 px-4 pt-2 bg-white shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setProfileActiveTab("invoices")}
+                  className={`pb-2.5 px-3.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                    profileActiveTab === "invoices"
+                      ? "border-indigo-600 text-indigo-700"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                  }`}
                 >
-                  <Phone size={14} />
-                  <span>কল করুন</span>
-                </a>
-                <a
-                  href={`https://wa.me/88${selectedClientForProfile.phone.replace(/[^0-9]/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1"
+                  <Package size={15} />
+                  <span>পণ্য ইন ও আউট চালান ({profileInvoices.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setProfileActiveTab("transactions")}
+                  className={`pb-2.5 px-3.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                    profileActiveTab === "transactions"
+                      ? "border-indigo-600 text-indigo-700"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                  }`}
                 >
-                  <MessageSquare size={14} />
-                  <span>WhatsApp</span>
-                </a>
+                  <Receipt size={15} />
+                  <span>নগদ লেনদেন খতিয়ান ({profileTransactions.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setProfileActiveTab("info")}
+                  className={`pb-2.5 px-3.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                    profileActiveTab === "info"
+                      ? "border-indigo-600 text-indigo-700"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  <Building2 size={15} />
+                  <span>প্রতিষ্ঠান তথ্য ও অ্যাকশন</span>
+                </button>
               </div>
 
-              {/* Profile Modal Action Buttons */}
-              <div className="pt-2 border-t border-gray-100 flex gap-2">
+              {/* Modal Body - Scrollable */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 bg-gray-50/50">
+                {/* TAB 1: INVOICES (PRODUCT IN / OUT) */}
+                {profileActiveTab === "invoices" && (
+                  <div className="space-y-4">
+                    {/* Filter Pills */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setProfileInvoiceFilter("all")}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            profileInvoiceFilter === "all"
+                              ? "bg-indigo-600 text-white shadow-2xs"
+                              : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
+                          }`}
+                        >
+                          সব ({profileInvoices.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProfileInvoiceFilter("product_in")}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            profileInvoiceFilter === "product_in"
+                              ? "bg-blue-600 text-white shadow-2xs"
+                              : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
+                          }`}
+                        >
+                          📥 পণ্য ইন ({profileInvoices.filter((i: any) => i.type === "product_in").length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProfileInvoiceFilter("product_out")}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            profileInvoiceFilter === "product_out"
+                              ? "bg-emerald-600 text-white shadow-2xs"
+                              : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
+                          }`}
+                        >
+                          📤 পণ্য আউট ({profileInvoices.filter((i: any) => i.type === "product_out").length})
+                        </button>
+                      </div>
+
+                      <span className="text-xs text-gray-400 hidden sm:inline">
+                        মাল কেনা ও বিক্রির সকল চালান
+                      </span>
+                    </div>
+
+                    {filteredProfileInvoices.length === 0 ? (
+                      <div className="p-10 text-center bg-white rounded-2xl border border-dashed border-gray-300">
+                        <Package className="mx-auto text-gray-400 mb-2" size={36} />
+                        <p className="font-bold text-gray-700 text-sm">কোনো পণ্য ইন বা আউট চালান পাওয়া যায়নি</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          এই প্রতিষ্ঠানের সাথে এখনও কোনো কেনাবেচা বা পণ্য ডেলিভারি চালান এন্ট্রি করা হয়নি।
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {filteredProfileInvoices.map((inv: any) => {
+                          const isSale = inv.type === "product_out";
+                          const due = inv.totalAmount - (inv.paidAmount || 0);
+
+                          return (
+                            <div
+                              key={inv.id}
+                              className="bg-white rounded-xl border border-gray-200 p-4 shadow-2xs space-y-3"
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-gray-100">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-mono text-xs font-extrabold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                                    #{inv.id.slice(-8)}
+                                  </span>
+                                  {isSale ? (
+                                    <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-md">
+                                      📤 পণ্য আউট (Sale)
+                                    </span>
+                                  ) : (
+                                    <span className="px-2.5 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold rounded-md">
+                                      📥 পণ্য ইন (Purchase)
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-gray-500 font-medium">
+                                    {new Date(inv.date).toLocaleDateString()}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                                      inv.paymentStatus === "paid"
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : inv.paymentStatus === "partial"
+                                        ? "bg-amber-100 text-amber-800"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
+                                    {inv.paymentStatus === "paid"
+                                      ? "পরিশোধিত"
+                                      : inv.paymentStatus === "partial"
+                                      ? "আংশিক জমা"
+                                      : "বকেয়া"}
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setSelectedInvoiceForPrint({
+                                        ...inv,
+                                        client: selectedClientForProfile,
+                                      })
+                                    }
+                                    className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                                    title="চালান প্রিন্ট"
+                                  >
+                                    <Printer size={13} />
+                                    <span>প্রিন্ট</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Items Table */}
+                              {inv.items && inv.items.length > 0 && (
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs text-left">
+                                    <thead className="bg-gray-50 text-gray-500 border-y border-gray-100 font-bold">
+                                      <tr>
+                                        <th className="py-1.5 px-3">পণ্যের বিবরণ</th>
+                                        <th className="py-1.5 px-3 text-right">পরিমাণ (Qty)</th>
+                                        <th className="py-1.5 px-3 text-right">দর (Rate)</th>
+                                        <th className="py-1.5 px-3 text-right">মোট (Total)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                      {inv.items.map((item: any) => (
+                                        <tr key={item.id} className="text-gray-800">
+                                          <td className="py-1.5 px-3 font-medium">
+                                            {item.product?.name || item.productName || "পণ্য"}
+                                          </td>
+                                          <td className="py-1.5 px-3 text-right font-bold">
+                                            {item.quantity}
+                                          </td>
+                                          <td className="py-1.5 px-3 text-right">
+                                            ৳ {item.pricePerUnit?.toLocaleString()}
+                                          </td>
+                                          <td className="py-1.5 px-3 text-right font-bold">
+                                            ৳ {item.total?.toLocaleString()}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {/* Financial totals */}
+                              <div className="flex flex-wrap items-center justify-end gap-4 text-xs font-bold pt-2 border-t border-gray-100">
+                                <span className="text-gray-600">
+                                  মোট বিল: ৳ {inv.totalAmount.toLocaleString()}
+                                </span>
+                                <span className="text-emerald-600">
+                                  জমা: ৳ {inv.paidAmount.toLocaleString()}
+                                </span>
+                                <span className="text-red-600">
+                                  বকেয়া: ৳ {due.toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: TRANSACTIONS (CASH IN / OUT LEDGER) */}
+                {profileActiveTab === "transactions" && (
+                  <div className="space-y-4">
+                    {profileTransactions.length === 0 ? (
+                      <div className="p-10 text-center bg-white rounded-2xl border border-dashed border-gray-300">
+                        <Receipt className="mx-auto text-gray-400 mb-2" size={36} />
+                        <p className="font-bold text-gray-700 text-sm">কোনো ক্যাশ লেনদেনের এন্ট্রি পাওয়া যায়নি</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          বকেয়া আদায় বা ক্যাশ লেনদেন সম্পন্ন হলে এখানে স্বয়ংক্রিয়ভাবে বিস্তারিত খতিয়ান দেখা যাবে।
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+                        <table className="w-full text-left text-xs text-gray-600">
+                          <thead className="bg-gray-50 border-b border-gray-100 font-bold text-gray-700">
+                            <tr>
+                              <th className="p-3">তারিখ ও সময়</th>
+                              <th className="p-3">বিবরণ (Description)</th>
+                              <th className="p-3">ধরন (Type)</th>
+                              <th className="p-3 text-right">টাকার পরিমাণ (Amount)</th>
+                              <th className="p-3 text-center">স্ট্যাটাস</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {profileTransactions.map((t: any) => (
+                              <tr key={t.id} className="hover:bg-gray-50">
+                                <td className="p-3 font-medium text-gray-700">
+                                  {new Date(t.date).toLocaleDateString()}{" "}
+                                  <span className="text-[10px] text-gray-400 block">
+                                    {new Date(t.date).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                </td>
+                                <td className="p-3 font-bold text-gray-900">
+                                  {t.description}
+                                </td>
+                                <td className="p-3">
+                                  {t.type === "in" ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      + নগদ জমা (Cash In)
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                      - নগদ প্রদান (Cash Out)
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right font-bold text-sm">
+                                  <span className={t.type === "in" ? "text-emerald-600" : "text-blue-600"}>
+                                    {t.type === "in" ? "+" : "-"} ৳ {t.amount.toLocaleString()}
+                                  </span>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[10px] font-bold">
+                                    {t.status || "APPROVED"}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 3: COMPANY INFO & ACTIONS */}
+                {profileActiveTab === "info" && (
+                  <div className="space-y-4">
+                    {/* Contact Information */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 shadow-2xs">
+                      <h4 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-2">
+                        প্রতিষ্ঠানের সাধারণ তথ্য (General Details)
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="p-3 bg-gray-50 rounded-xl">
+                          <span className="text-gray-400 block mb-1">প্রতিষ্ঠানের নাম</span>
+                          <span className="font-bold text-gray-900 text-sm">
+                            {selectedClientForProfile.name}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-xl">
+                          <span className="text-gray-400 block mb-1">মোবাইল নম্বর</span>
+                          <span className="font-bold text-gray-900 text-sm">
+                            {selectedClientForProfile.phone}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-xl sm:col-span-2">
+                          <span className="text-gray-400 block mb-1">ঠিকানা</span>
+                          <span className="font-bold text-gray-900">
+                            {selectedClientForProfile.address || "ঠিকানা দেওয়া নেই"}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-xl">
+                          <span className="text-gray-400 block mb-1">যুক্ত হওয়ার তারিখ</span>
+                          <span className="font-bold text-gray-900">
+                            {new Date(selectedClientForProfile.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-xl">
+                          <span className="text-gray-400 block mb-1">হিসাবের ধরন</span>
+                          <span className="font-bold text-indigo-700">
+                            প্রতিষ্ঠান (Company / Supplier / Customer)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Direct Contact Buttons */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <a
+                        href={`tel:${selectedClientForProfile.phone}`}
+                        className="py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <Phone size={15} />
+                        <span>সরাসরি কল দিন ({selectedClientForProfile.phone})</span>
+                      </a>
+                      <a
+                        href={`https://wa.me/88${selectedClientForProfile.phone.replace(/[^0-9]/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <MessageSquare size={15} />
+                        <span>WhatsApp-এ যোগাযোগ করুন</span>
+                      </a>
+                    </div>
+
+                    {/* Login Portal Access Card */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                        <h4 className="font-bold text-sm text-gray-900">
+                          অনলাইন পোর্টাল লগইন অ্যাক্সেস
+                        </h4>
+                        {selectedClientForProfile.user ? (
+                          <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">
+                            ✓ সক্রিয়
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">
+                            তৈরি করা হয়নি
+                          </span>
+                        )}
+                      </div>
+
+                      {selectedClientForProfile.user ? (
+                        <div className="space-y-3 text-xs">
+                          <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl space-y-1">
+                            <p className="text-emerald-900 font-medium">
+                              প্রতিষ্ঠান তার ইউজারনেম দিয়ে বাংলা ইআরপিতে লগইন করতে পারবেন।
+                            </p>
+                            <p className="font-mono font-bold text-gray-800">
+                              ইউজারনেম (User ID):{" "}
+                              <span className="text-indigo-700">
+                                {selectedClientForProfile.user.username}
+                              </span>
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const c = selectedClientForProfile;
+                                setSelectedClientForProfile(null);
+                                openLoginModal(c);
+                              }}
+                              className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <KeyRound size={14} />
+                              <span>পাসওয়ার্ড পরিবর্তন</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const c = selectedClientForProfile;
+                                setSelectedClientForProfile(null);
+                                setRevokeError("");
+                                setClientToRevoke(c);
+                              }}
+                              className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <UserX size={14} />
+                              <span>লগইন অ্যাক্সেস বাতিল (Revoke)</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-xs text-gray-500">
+                            এই কোম্পানিকে তাদের চালান ও হিসাব নিজে দেখার জন্য পোর্টাল লগইন দিতে নিচের বাটনে ক্লিক করুন।
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const c = selectedClientForProfile;
+                              setSelectedClientForProfile(null);
+                              openLoginModal(c);
+                            }}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          >
+                            <ShieldCheck size={14} />
+                            <span>লগইন অ্যাক্সেস তৈরি করুন</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions Section */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 shadow-2xs">
+                      <h4 className="font-bold text-sm text-gray-900 border-b border-gray-100 pb-2">
+                        কোম্পানি অ্যাকশন (Actions)
+                      </h4>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const c = selectedClientForProfile;
+                            setSelectedClientForProfile(null);
+                            openEditModal(c);
+                          }}
+                          className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Pencil size={14} />
+                          <span>কোম্পানি এডিট করুন</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteError("");
+                            setSelectedClientForDelete(selectedClientForProfile);
+                          }}
+                          className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                          <span>কোম্পানি মুছে ফেলুন</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-3 sm:p-4 bg-gray-100 border-t border-gray-200 flex justify-between items-center shrink-0">
+                <span className="text-xs text-gray-500 font-medium hidden sm:inline">
+                  বাংলা ইআরপি • কোম্পানি পূর্ণাঙ্গ খতিয়ান ও বিস্তারিত ভিউ
+                </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    const c = selectedClientForProfile;
-                    setSelectedClientForProfile(null);
-                    openEditModal(c);
-                  }}
-                  className="flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  onClick={() => setSelectedClientForProfile(null)}
+                  className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer ml-auto"
                 >
-                  <Pencil size={14} />
-                  <span>তথ্য এডিট</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDeleteError("");
-                    setSelectedClientForDelete(selectedClientForProfile);
-                  }}
-                  className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Trash2 size={14} />
-                  <span>মুছে ফেলুন</span>
+                  বন্ধ করুন (Close)
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* DELETE CONFIRMATION MODAL */}
       {selectedClientForDelete && (
@@ -1021,6 +1490,13 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
           </div>
         </div>
       )}
+
+      {/* Printable Invoice Slip Modal */}
+      <PrintableInvoiceModal
+        isOpen={Boolean(selectedInvoiceForPrint)}
+        invoice={selectedInvoiceForPrint}
+        onClose={() => setSelectedInvoiceForPrint(null)}
+      />
     </div>
   );
 }
