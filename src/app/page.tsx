@@ -101,10 +101,17 @@ export default async function Home() {
     purchasesProductCount = todaysPurchases.reduce((sum, p) => sum + p.items.reduce((q, item) => q + item.quantity, 0), 0);
 
     // 5. Total Due (ব্যবসায়ের মোট অপরিশোধিত বকেয়া হিসাব - exactly matching /loan)
-    const allInvoices = await prisma.invoice.findMany();
-    totalDueReceivable = allInvoices.reduce((sum, inv) => {
+    const [allInvoices, allClients] = await Promise.all([
+      prisma.invoice.findMany(),
+      prisma.client.findMany({ select: { openingBalance: true } }),
+    ]);
+    const invoiceDue = allInvoices.reduce((sum, inv) => {
       return sum + Math.max(0, inv.totalAmount - inv.paidAmount);
     }, 0);
+    const clientOpeningDue = allClients.reduce((sum, client) => {
+      return sum + Math.max(0, client.openingBalance);
+    }, 0);
+    totalDueReceivable = invoiceDue + clientOpeningDue;
 
     // 6. Monthly Profit (from 1st of month BST)
     const monthlySales = await prisma.invoice.findMany({

@@ -315,18 +315,110 @@ export async function settleInvoiceDue(data: {
   }
 }
 
+export async function settleClientOpeningDue(data: {
+  clientId: string;
+  amount: number;
+  paymentMethod?: string;
+  requestedBy?: string;
+}) {
+  try {
+    const amount = Number(data.amount);
+    if (!amount || amount <= 0) {
+      return { success: false, error: "সঠিক টাকার পরিমাণ দিন।" };
+    }
+
+    const client = await prisma.client.findUnique({
+      where: { id: data.clientId },
+    });
+
+    if (!client) {
+      return { success: false, error: "প্রতিষ্ঠানটি খুঁজে পাওয়া যায়নি।" };
+    }
+
+    if (client.openingBalance < amount) {
+      return {
+        success: false,
+        error: `পরিশোধের পরিমাণ অবশিষ্ট বকেয়া (৳${client.openingBalance.toLocaleString()}) এর চেয়ে বেশি হতে পারে না।`,
+      };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Decrement client's opening balance
+      await tx.client.update({
+        where: { id: data.clientId },
+        data: {
+          openingBalance: { decrement: amount },
+        },
+      });
+
+      // 2. Record Cash In transaction
+      await tx.transaction.create({
+        data: {
+          type: "in",
+          amount: amount,
+          description: `[পূর্বের বকেয়া আদায়] ${client.name}`,
+          status: "APPROVED",
+          clientId: client.id,
+          requestedBy: data.requestedBy || "owner",
+        },
+      });
+    });
+
+    try {
+      revalidatePath("/loan");
+      revalidatePath("/due");
+      revalidatePath("/main-cash");
+      revalidatePath("/clients");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidate warning:", e);
+    }
+
+    try {
+      await recordAuditLog(
+        data.requestedBy || "owner",
+        "SETTLE_CLIENT_DUE",
+        `আদায়কৃত পূর্বের বকেয়া: ${client.name} থেকে ৳${amount.toLocaleString()} টাকা নগদ ক্যাশে জমা হয়েছে`
+      );
+    } catch (e) {
+      console.warn("Audit log warning:", e);
+    }
+
+    // Auto-trigger 2nd Backup Vault snapshot (non-blocking)
+    try {
+      import("@/lib/backupVault")
+        .then(({ createAutomatedBackupSnapshot }) => {
+          createAutomatedBackupSnapshot(
+            "AUTO_CLIENT_DUE_SETTLED",
+            `আদায়কৃত পূর্বের বকেয়া: ${client.name} থেকে ৳${amount.toLocaleString()} টাকা`
+          ).catch((bErr) => console.warn("Auto backup warning:", bErr));
+        })
+        .catch((e) => console.warn("Backup import warning:", e));
+    } catch (bErr) {
+      console.warn("Auto backup warning:", bErr);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error settling client opening due:", error);
+    return { success: false, error: error?.message || "বকেয়া পরিশোধ করতে সমস্যা হয়েছে" };
+  }
+}
+
 export async function recordTagadaReminder(data: {
-  invoiceId: string;
+  invoiceId?: string;
+  clientId?: string;
   clientName: string;
   amount: number;
   channel: string;
   requestedBy?: string;
 }) {
   try {
+    const ref = data.invoiceId ? `Invoice #${data.invoiceId.substring(0, 8)}` : `পূর্বের বকেয়া`;
     await recordAuditLog(
       data.requestedBy || "owner",
       "TAGADA_REMINDER",
-      `বকেয়া তাগাদা পাঠানো হয়েছে: ${data.clientName}-কে ৳${Number(data.amount).toLocaleString()} বকেয়ার জন্য (${data.channel}, Invoice #${data.invoiceId.substring(0, 8)})`
+      `বকেয়া তাগাদা পাঠানো হয়েছে: ${data.clientName}-কে ৳${Number(data.amount).toLocaleString()} বকেয়ার জন্য (${data.channel}, ${ref})`
     );
     revalidatePath("/loan");
     revalidatePath("/audit-logs");

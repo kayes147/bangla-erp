@@ -5,7 +5,6 @@ import {
   CalendarClock, 
   Search, 
   ArrowDownToLine, 
-  ArrowUpFromLine, 
   Printer, 
   CheckCircle2, 
   AlertCircle, 
@@ -15,11 +14,29 @@ import {
   BellRing,
   PhoneCall,
   MessageSquare,
-  Copy
+  Copy,
+  Building2
 } from "lucide-react";
-import { settleInvoiceDue, recordTagadaReminder } from "@/actions/invoiceActions";
+import { settleInvoiceDue, settleClientOpeningDue, recordTagadaReminder } from "@/actions/invoiceActions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import PrintableInvoiceModal from "@/components/PrintableInvoiceModal";
+
+export interface DueEntry {
+  id: string;
+  sourceType: "invoice" | "company_opening";
+  rawInvoice?: any;
+  clientId: string;
+  clientName: string;
+  clientPhone: string;
+  clientAddress?: string | null;
+  type: string; // "product_in" | "product_out" | "opening_due"
+  date: Date | string;
+  dueDate: Date | string | null;
+  totalAmount: number;
+  paidAmount: number;
+  dueAmount: number;
+}
 
 export default function LoanClient({
   initialInvoices,
@@ -35,7 +52,7 @@ export default function LoanClient({
 
   // Tagada / Reminder Modal State
   const [tagadaModalOpen, setTagadaModalOpen] = useState(false);
-  const [selectedInvoiceForTagada, setSelectedInvoiceForTagada] = useState<any | null>(null);
+  const [selectedEntryForTagada, setSelectedEntryForTagada] = useState<DueEntry | null>(null);
   const [copied, setCopied] = useState(false);
   const [showSettleSection, setShowSettleSection] = useState(false);
   const [settleAmount, setSettleAmount] = useState("");
@@ -48,70 +65,101 @@ export default function LoanClient({
   const threeDaysFromNow = new Date(now);
   threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
+  // 1. Build unified due entries from invoices and company opening balances
+  const invoiceEntries: DueEntry[] = (initialInvoices || [])
+    .filter((inv) => (inv.totalAmount || 0) - (inv.paidAmount || 0) > 0)
+    .map((inv) => ({
+      id: inv.id,
+      sourceType: "invoice" as const,
+      rawInvoice: inv,
+      clientId: inv.client?.id || inv.clientId,
+      clientName: inv.client?.name || "গ্রাহক/সরবরাহকারী",
+      clientPhone: inv.client?.phone || "",
+      clientAddress: inv.client?.address,
+      type: inv.type,
+      date: inv.date,
+      dueDate: inv.dueDate,
+      totalAmount: inv.totalAmount,
+      paidAmount: inv.paidAmount,
+      dueAmount: Math.max(0, inv.totalAmount - inv.paidAmount),
+    }));
+
+  const companyOpeningEntries: DueEntry[] = (clients || [])
+    .filter((c) => (c.openingBalance || 0) > 0)
+    .map((c) => ({
+      id: `company-${c.id}`,
+      sourceType: "company_opening" as const,
+      clientId: c.id,
+      clientName: c.name,
+      clientPhone: c.phone || "",
+      clientAddress: c.address,
+      type: "opening_due",
+      date: c.createdAt || new Date(),
+      dueDate: null,
+      totalAmount: c.openingBalance,
+      paidAmount: 0,
+      dueAmount: c.openingBalance,
+    }));
+
+  const allDueEntries: DueEntry[] = [...invoiceEntries, ...companyOpeningEntries];
+
   // Calculate stats
   let totalDue = 0;
-  let pendingCount = 0;
+  let pendingCount = allDueEntries.length;
   let overdueCount = 0;
 
-  initialInvoices.forEach((inv) => {
-    const due = Math.max(0, inv.totalAmount - inv.paidAmount);
-    if (due > 0) {
-      totalDue += due;
-      pendingCount++;
-      if (inv.dueDate && new Date(inv.dueDate) < now) {
-        overdueCount++;
-      }
+  allDueEntries.forEach((entry) => {
+    totalDue += entry.dueAmount;
+    if (entry.dueDate && new Date(entry.dueDate) < now) {
+      overdueCount++;
     }
   });
 
-  // Filter invoices
-  const filteredInvoices = initialInvoices.filter((inv) => {
-    const due = inv.totalAmount - inv.paidAmount;
-    if (due <= 0) return false;
-
+  // Filter dues
+  const filteredEntries = allDueEntries.filter((item) => {
     // Search filter
-    const clientName = inv.client?.name?.toLowerCase() || "";
-    const clientPhone = inv.client?.phone || "";
+    const clientName = item.clientName.toLowerCase();
+    const clientPhone = item.clientPhone;
     const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || clientPhone.includes(searchTerm);
     if (!matchesSearch) return false;
 
     // Tab filter: only 'overdue' filters, 'all' shows all dues
     if (filterTab === "overdue") {
-      return inv.dueDate && new Date(inv.dueDate) < now;
+      return item.dueDate && new Date(item.dueDate) < now;
     }
 
     return true;
   });
 
-  const handleOpenTagadaModal = (inv: any) => {
-    const due = inv.totalAmount - inv.paidAmount;
-    setSelectedInvoiceForTagada(inv);
-    setSettleAmount(due.toString());
+  const handleOpenTagadaModal = (entry: DueEntry) => {
+    setSelectedEntryForTagada(entry);
+    setSettleAmount(entry.dueAmount.toString());
     setShowSettleSection(false);
     setCopied(false);
     setTagadaModalOpen(true);
   };
 
-  const generateTagadaMessage = (inv: any) => {
-    const due = inv.totalAmount - inv.paidAmount;
-    const dueDateText = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "শীঘ্রই";
-    const partyName = inv.client?.name || "সম্মানিত গ্রাহক/প্রতিষ্ঠান";
-    const invoiceShort = inv.id.slice(-8);
-
-    return `আসসালামু আলাইকুম ${partyName}, বাংলা ইআরপি থেকে বকেয়া সংক্রান্ত তাগাদা: আপনার চালান #${invoiceShort} বাবদ অবশিষ্ট বকেয়া ৳${due.toLocaleString()} টাকা। পরিশোধের নির্ধারিত তারিখ ছিল: ${dueDateText}। অনুগ্রহপূর্বক দ্রুত বকেয়া পরিশোধের ব্যবস্থা করার বিনীত অনুরোধ রইলো। ধন্যবাদ।`;
+  const generateTagadaMessage = (item: DueEntry) => {
+    if (item.sourceType === "company_opening") {
+      return `আসসালামু আলাইকুম ${item.clientName}, বাংলা ইআরপি থেকে বকেয়া সংক্রান্ত তাগাদা: আপনার প্রতিষ্ঠানের পূর্বের হিসাব বাবদ অবশিষ্ট বকেয়া ৳${item.dueAmount.toLocaleString()} টাকা। অনুগ্রহপূর্বক দ্রুত বকেয়া পরিশোধের ব্যবস্থা করার বিনীত অনুরোধ রইলো। ধন্যবাদ।`;
+    }
+    const dueDateText = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "শীঘ্রই";
+    const invoiceShort = item.id.slice(-8);
+    return `আসসালামু আলাইকুম ${item.clientName}, বাংলা ইআরপি থেকে বকেয়া সংক্রান্ত তাগাদা: আপনার চালান #${invoiceShort} বাবদ অবশিষ্ট বকেয়া ৳${item.dueAmount.toLocaleString()} টাকা। পরিশোধের নির্ধারিত তারিখ ছিল: ${dueDateText}। অনুগ্রহপূর্বক দ্রুত বকেয়া পরিশোধের ব্যবস্থা করার বিনীত অনুরোধ রইলো। ধন্যবাদ।`;
   };
 
-  const handleSendWhatsApp = async (inv: any) => {
-    const phone = inv.client?.phone || "";
+  const handleSendWhatsApp = async (item: DueEntry) => {
+    const phone = item.clientPhone || "";
     const cleanPhone = phone.replace(/[^0-9]/g, "");
     const formattedPhone = cleanPhone.startsWith("880") ? cleanPhone : `880${cleanPhone.replace(/^0/, "")}`;
-    const message = generateTagadaMessage(inv);
+    const message = generateTagadaMessage(item);
 
     // Record audit log
     await recordTagadaReminder({
-      invoiceId: inv.id,
-      clientName: inv.client?.name || "Client",
-      amount: inv.totalAmount - inv.paidAmount,
+      invoiceId: item.sourceType === "invoice" ? item.id : undefined,
+      clientId: item.clientId,
+      clientName: item.clientName,
+      amount: item.dueAmount,
       channel: "WhatsApp",
       requestedBy: "owner",
     });
@@ -120,18 +168,19 @@ export default function LoanClient({
     window.open(url, "_blank");
   };
 
-  const handleRecordCall = async (inv: any) => {
+  const handleRecordCall = async (item: DueEntry) => {
     await recordTagadaReminder({
-      invoiceId: inv.id,
-      clientName: inv.client?.name || "Client",
-      amount: inv.totalAmount - inv.paidAmount,
+      invoiceId: item.sourceType === "invoice" ? item.id : undefined,
+      clientId: item.clientId,
+      clientName: item.clientName,
+      amount: item.dueAmount,
       channel: "Phone Call",
       requestedBy: "owner",
     });
   };
 
-  const handleCopyMessage = (inv: any) => {
-    const message = generateTagadaMessage(inv);
+  const handleCopyMessage = (item: DueEntry) => {
+    const message = generateTagadaMessage(item);
     navigator.clipboard.writeText(message);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
@@ -139,19 +188,28 @@ export default function LoanClient({
 
   const handleSettleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInvoiceForTagada || !settleAmount || Number(settleAmount) <= 0) return;
+    if (!selectedEntryForTagada || !settleAmount || Number(settleAmount) <= 0) return;
 
     setLoading(true);
-    const res = await settleInvoiceDue({
-      invoiceId: selectedInvoiceForTagada.id,
-      amount: Number(settleAmount),
-      requestedBy: "owner",
-    });
+    let res;
+    if (selectedEntryForTagada.sourceType === "company_opening") {
+      res = await settleClientOpeningDue({
+        clientId: selectedEntryForTagada.clientId,
+        amount: Number(settleAmount),
+        requestedBy: "owner",
+      });
+    } else {
+      res = await settleInvoiceDue({
+        invoiceId: selectedEntryForTagada.id,
+        amount: Number(settleAmount),
+        requestedBy: "owner",
+      });
+    }
 
     setLoading(false);
     if (res.success) {
       setTagadaModalOpen(false);
-      setSelectedInvoiceForTagada(null);
+      setSelectedEntryForTagada(null);
       setSettleAmount("");
       router.refresh();
     } else {
@@ -172,7 +230,7 @@ export default function LoanClient({
               বকেয়ার হিসাব <span className="text-lg font-normal text-gray-500">(Business Due Management)</span>
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              ব্যবসার কার কার কাছে কত টাকা বাকি আছে এবং পরিশোধের প্রতিশ্রুত তারিখ ও তাগাদার তালিকা।
+              কোম্পানি ও কাস্টমারদের কাছে কত টাকা বাকি আছে, পরিশোধের প্রতিশ্রুত তারিখ ও সরাসরি তাগাদার তালিকা।
             </p>
           </div>
         </div>
@@ -195,18 +253,18 @@ export default function LoanClient({
           </div>
         </div>
 
-        {/* মোট বকেয়া চালান */}
+        {/* মোট বকেয়া এন্ট্রি */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <p className="font-bold text-gray-800">মোট বকেয়া চালান</p>
+              <p className="font-bold text-gray-800">মোট বকেয়া তালিকা</p>
               <ArrowDownToLine size={20} className="text-gray-400" />
             </div>
-            <p className="text-[10px] text-gray-400 uppercase mt-0.5">(Total Pending Invoices)</p>
+            <p className="text-[10px] text-gray-400 uppercase mt-0.5">(Total Pending Dues)</p>
           </div>
           <div className="mt-4">
-            <h2 className="text-3xl font-bold text-gray-900">{pendingCount} টি চালান</h2>
-            <p className="text-xs text-gray-500 mt-1">যেসব চালানের টাকা এখনও বাকি আছে</p>
+            <h2 className="text-3xl font-bold text-gray-900">{pendingCount} টি এন্ট্রি</h2>
+            <p className="text-xs text-gray-500 mt-1">যেসব কোম্পানি ও চালানের টাকা এখনও বাকি আছে</p>
           </div>
         </div>
 
@@ -217,11 +275,11 @@ export default function LoanClient({
               <p className="font-bold text-gray-800">তারিখ পার হওয়া বকেয়া</p>
               <AlertCircle size={20} className="text-red-500" />
             </div>
-            <p className="text-[10px] text-gray-400 uppercase mt-0.5">(Overdue Invoices)</p>
+            <p className="text-[10px] text-gray-400 uppercase mt-0.5">(Overdue Dues)</p>
           </div>
           <div className="mt-4">
-            <h2 className="text-3xl font-bold text-red-600">{overdueCount} টি চালান</h2>
-            <p className="text-xs text-gray-500 mt-1">প্রতিশ্রুত তারিখ পেরিয়ে গেছে</p>
+            <h2 className="text-3xl font-bold text-red-600">{overdueCount} টি</h2>
+            <p className="text-xs text-gray-500 mt-1">প্রতিশ্রুত পরিশোধের তারিখ পেরিয়ে গেছে</p>
           </div>
         </div>
       </div>
@@ -238,7 +296,7 @@ export default function LoanClient({
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            সব বকেয়া ({initialInvoices.filter(i => i.totalAmount > i.paidAmount).length})
+            সব বকেয়া ({allDueEntries.length})
           </button>
           <button
             onClick={() => setFilterTab("overdue")}
@@ -257,7 +315,7 @@ export default function LoanClient({
           <Search size={16} className="absolute left-3 top-3 text-gray-400" />
           <input
             type="text"
-            placeholder="পার্টির নাম বা ফোন দিয়ে খুঁজুন..."
+            placeholder="কোম্পানি বা ফোন নম্বর দিয়ে খুঁজুন..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-amber-500 outline-none"
@@ -271,8 +329,8 @@ export default function LoanClient({
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="p-4 font-bold text-gray-700">পার্টির নাম <span className="text-[10px] font-normal text-gray-400 block uppercase">(Party Name)</span></th>
-                <th className="p-4 font-bold text-gray-700">চালানের ধরন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Type)</span></th>
+                <th className="p-4 font-bold text-gray-700">প্রতিষ্ঠানের নাম <span className="text-[10px] font-normal text-gray-400 block uppercase">(Company Name)</span></th>
+                <th className="p-4 font-bold text-gray-700">বকেয়ার ধরন <span className="text-[10px] font-normal text-gray-400 block uppercase">(Due Type)</span></th>
                 <th className="p-4 font-bold text-gray-700">বাকি শুরুর তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Due Start Date)</span></th>
                 <th className="p-4 font-bold text-gray-700">পরিশোধের তারিখ <span className="text-[10px] font-normal text-gray-400 block uppercase">(Promised Payment Date)</span></th>
                 <th className="p-4 font-bold text-gray-700 text-right">মোট বিল <span className="text-[10px] font-normal text-gray-400 block uppercase">(Total Bill)</span></th>
@@ -282,22 +340,25 @@ export default function LoanClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredInvoices.map((inv) => {
-                const due = inv.totalAmount - inv.paidAmount;
-                const isOverdue = inv.dueDate && new Date(inv.dueDate) < now;
-                const isDueSoon = inv.dueDate && !isOverdue && new Date(inv.dueDate) <= threeDaysFromNow;
+              {filteredEntries.map((item) => {
+                const isOverdue = item.dueDate && new Date(item.dueDate) < now;
+                const isDueSoon = item.dueDate && !isOverdue && new Date(item.dueDate) <= threeDaysFromNow;
 
                 return (
-                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                     {/* Party */}
                     <td className="p-4">
-                      <div className="font-bold text-gray-900">{inv.client?.name}</div>
-                      <div className="text-xs text-gray-500">{inv.client?.phone || "ফোন নেই"}</div>
+                      <div className="font-bold text-gray-900">{item.clientName}</div>
+                      <div className="text-xs text-gray-500">{item.clientPhone || "ফোন নেই"}</div>
                     </td>
 
-                    {/* Invoice Type */}
+                    {/* Due Type */}
                     <td className="p-4">
-                      {inv.type === "product_in" ? (
+                      {item.sourceType === "company_opening" ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-300 rounded text-xs font-bold">
+                          🏛️ পূর্বের বকেয়া
+                        </span>
+                      ) : item.type === "product_in" ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-bold">
                           পণ্য ইন (Product In)
                         </span>
@@ -310,16 +371,16 @@ export default function LoanClient({
 
                     {/* Start Date */}
                     <td className="p-4 font-medium text-gray-700">
-                      {new Date(inv.date).toLocaleDateString()}
+                      {new Date(item.date).toLocaleDateString()}
                     </td>
 
                     {/* Due / Promised Date */}
                     <td className="p-4">
-                      {inv.dueDate ? (
+                      {item.dueDate ? (
                         <div>
                           <div className="font-bold text-gray-900 flex items-center space-x-1">
                             <Clock size={14} className="text-gray-400" />
-                            <span>{new Date(inv.dueDate).toLocaleDateString()}</span>
+                            <span>{new Date(item.dueDate).toLocaleDateString()}</span>
                           </div>
                           {isOverdue && (
                             <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-red-100 text-red-700 font-bold text-[10px] rounded">
@@ -339,18 +400,18 @@ export default function LoanClient({
 
                     {/* Total */}
                     <td className="p-4 text-right font-medium text-gray-700">
-                      ৳ {inv.totalAmount.toLocaleString()}
+                      ৳ {item.totalAmount.toLocaleString()}
                     </td>
 
                     {/* Paid */}
                     <td className="p-4 text-right font-medium text-emerald-600">
-                      ৳ {inv.paidAmount.toLocaleString()}
+                      ৳ {item.paidAmount.toLocaleString()}
                     </td>
 
                     {/* Due */}
                     <td className="p-4 text-right">
                       <span className="font-bold text-base text-red-600">
-                        ৳ {due.toLocaleString()}
+                        ৳ {item.dueAmount.toLocaleString()}
                       </span>
                     </td>
 
@@ -358,27 +419,37 @@ export default function LoanClient({
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={() => handleOpenTagadaModal(inv)}
+                          onClick={() => handleOpenTagadaModal(item)}
                           className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 active:scale-95"
                           title="বকেয়া তাগাদা পাঠান"
                         >
                           <BellRing size={13} />
                           <span>তাগাদা</span>
                         </button>
-                        <button
-                          onClick={() => setSelectedInvoiceForPrint(inv)}
-                          className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-                          title="চালান প্রিন্ট"
-                        >
-                          <Printer size={15} />
-                        </button>
+                        {item.sourceType === "invoice" ? (
+                          <button
+                            onClick={() => setSelectedInvoiceForPrint(item.rawInvoice)}
+                            className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                            title="চালান প্রিন্ট"
+                          >
+                            <Printer size={15} />
+                          </button>
+                        ) : (
+                          <Link
+                            href="/clients"
+                            className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                            title="প্রতিষ্ঠান তালিকা দেখুন"
+                          >
+                            <Building2 size={15} />
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>
                 );
               })}
 
-              {filteredInvoices.length === 0 && (
+              {filteredEntries.length === 0 && (
                 <tr>
                   <td colSpan={8} className="p-12 text-center text-gray-400">
                     <CheckCircle2 size={36} className="mx-auto mb-2 text-emerald-400 opacity-80" />
@@ -393,7 +464,7 @@ export default function LoanClient({
       </div>
 
       {/* Tagada / Reminder Modal */}
-      {tagadaModalOpen && selectedInvoiceForTagada && (
+      {tagadaModalOpen && selectedEntryForTagada && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-150">
             {/* Modal Header */}
@@ -415,23 +486,29 @@ export default function LoanClient({
               <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 space-y-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-bold text-base text-gray-900">{selectedInvoiceForTagada.client?.name}</h4>
-                    <p className="text-xs text-gray-500 font-medium">{selectedInvoiceForTagada.client?.phone || "ফোন নম্বর নেই"}</p>
+                    <h4 className="font-bold text-base text-gray-900">{selectedEntryForTagada.clientName}</h4>
+                    <p className="text-xs text-gray-500 font-medium">{selectedEntryForTagada.clientPhone || "ফোন নম্বর নেই"}</p>
                   </div>
-                  <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-xs font-mono font-bold">
-                    #{selectedInvoiceForTagada.id.slice(-8)}
-                  </span>
+                  {selectedEntryForTagada.sourceType === "company_opening" ? (
+                    <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-xs font-bold">
+                      🏛️ পূর্বের বকেয়া
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-xs font-mono font-bold">
+                      #{selectedEntryForTagada.id.slice(-8)}
+                    </span>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-amber-200/60 text-xs">
                   <div>
                     <span className="text-gray-500 block">বাকি শুরুর তারিখ:</span>
-                    <span className="font-bold text-gray-800">{new Date(selectedInvoiceForTagada.date).toLocaleDateString()}</span>
+                    <span className="font-bold text-gray-800">{new Date(selectedEntryForTagada.date).toLocaleDateString()}</span>
                   </div>
                   <div>
                     <span className="text-gray-500 block">পরিশোধের প্রতিশ্রুত তারিখ:</span>
                     <span className="font-bold text-gray-800">
-                      {selectedInvoiceForTagada.dueDate ? new Date(selectedInvoiceForTagada.dueDate).toLocaleDateString() : "নির্ধারিত নেই"}
+                      {selectedEntryForTagada.dueDate ? new Date(selectedEntryForTagada.dueDate).toLocaleDateString() : "নির্ধারিত নেই"}
                     </span>
                   </div>
                 </div>
@@ -439,12 +516,12 @@ export default function LoanClient({
                 <div className="pt-2 flex justify-between items-center border-t border-amber-200/60">
                   <span className="text-xs font-bold text-gray-700">বকেয়া টাকার পরিমাণ:</span>
                   <span className="text-xl font-bold text-red-600">
-                    ৳ {(selectedInvoiceForTagada.totalAmount - selectedInvoiceForTagada.paidAmount).toLocaleString()}
+                    ৳ {selectedEntryForTagada.dueAmount.toLocaleString()}
                   </span>
                 </div>
 
                 {/* Overdue Alert Banner */}
-                {selectedInvoiceForTagada.dueDate && new Date(selectedInvoiceForTagada.dueDate) < now && (
+                {selectedEntryForTagada.dueDate && new Date(selectedEntryForTagada.dueDate) < now && (
                   <div className="mt-2 bg-red-100 border border-red-300 text-red-800 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5">
                     <AlertCircle size={15} className="shrink-0 text-red-600" />
                     <span>⚠️ সতর্কবার্তা: নির্ধারিত পরিশোধের তারিখ পেরিয়ে গেছে!</span>
@@ -458,7 +535,7 @@ export default function LoanClient({
                   তাগাদা বার্তার খসড়া (Message Preview)
                 </label>
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-800 leading-relaxed font-medium">
-                  {generateTagadaMessage(selectedInvoiceForTagada)}
+                  {generateTagadaMessage(selectedEntryForTagada)}
                 </div>
               </div>
 
@@ -469,7 +546,7 @@ export default function LoanClient({
                   {/* WhatsApp */}
                   <button
                     type="button"
-                    onClick={() => handleSendWhatsApp(selectedInvoiceForTagada)}
+                    onClick={() => handleSendWhatsApp(selectedEntryForTagada)}
                     className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
                   >
                     <MessageSquare size={16} />
@@ -478,8 +555,8 @@ export default function LoanClient({
 
                   {/* Phone Call */}
                   <a
-                    href={`tel:${selectedInvoiceForTagada.client?.phone || ""}`}
-                    onClick={() => handleRecordCall(selectedInvoiceForTagada)}
+                    href={`tel:${selectedEntryForTagada.clientPhone || ""}`}
+                    onClick={() => handleRecordCall(selectedEntryForTagada)}
                     className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 text-center"
                   >
                     <PhoneCall size={16} />
@@ -489,7 +566,7 @@ export default function LoanClient({
                   {/* Copy Message */}
                   <button
                     type="button"
-                    onClick={() => handleCopyMessage(selectedInvoiceForTagada)}
+                    onClick={() => handleCopyMessage(selectedEntryForTagada)}
                     className="flex items-center justify-center space-x-2 py-2.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-all border border-gray-200 active:scale-95"
                   >
                     {copied ? <CheckCircle2 size={16} className="text-emerald-600" /> : <Copy size={16} />}
@@ -505,7 +582,7 @@ export default function LoanClient({
                     type="button"
                     onClick={() => {
                       setShowSettleSection(true);
-                      setSettleAmount((selectedInvoiceForTagada.totalAmount - selectedInvoiceForTagada.paidAmount).toString());
+                      setSettleAmount(selectedEntryForTagada.dueAmount.toString());
                     }}
                     className="w-full py-2 text-center text-xs font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200"
                   >
@@ -527,7 +604,7 @@ export default function LoanClient({
                       type="number"
                       value={settleAmount}
                       onChange={(e) => setSettleAmount(e.target.value)}
-                      max={selectedInvoiceForTagada.totalAmount - selectedInvoiceForTagada.paidAmount}
+                      max={selectedEntryForTagada.dueAmount}
                       min={1}
                       className="w-full p-2.5 border border-gray-300 rounded-lg text-base font-bold text-gray-900 bg-white outline-none focus:ring-2 focus:ring-amber-500"
                       required
