@@ -65,6 +65,11 @@ export default function Register() {
       return;
     }
 
+    if (companyPhone.trim() && companyPhone.trim().length !== 11) {
+      alert("কোম্পানির মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 019XXXXXXXX)!");
+      return;
+    }
+
     if (hasManager) {
       if (!managerUsername.trim()) {
         alert("ম্যানেজারের জন্য ইউজারনেম দিন!");
@@ -325,14 +330,21 @@ export default function Register() {
                 {showMoreCompanyDetails && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pt-3 border-t border-slate-200">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">কোম্পানির মোবাইল নম্বর</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700">কোম্পানির মোবাইল নম্বর</label>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {companyPhone.length}/১১ ডিজিট
+                        </span>
+                      </div>
                       <div className="relative">
                         <input 
-                          type="text" 
+                          type="tel" 
+                          inputMode="numeric"
+                          maxLength={11}
                           value={companyPhone}
-                          onChange={(e) => setCompanyPhone(e.target.value)}
+                          onChange={(e) => setCompanyPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
                           placeholder="যেমন: 01954223347"
-                          className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-800 font-medium" 
+                          className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-800 font-medium font-mono" 
                         />
                         <Phone className="absolute left-3 top-3 text-slate-400" size={16} />
                       </div>

@@ -14,12 +14,17 @@ export async function createClient(data: {
   openingBalance: number;
 }) {
   try {
+    const cleanedPhone = data.phone?.replace(/\D/g, "");
+    if (!cleanedPhone || cleanedPhone.length !== 11) {
+      return { success: false, error: "মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 017XXXXXXXX)!" };
+    }
+
     const client = await prisma.client.create({
       data: {
         type: data.type,
-        name: data.name,
-        phone: data.phone,
-        address: data.address,
+        name: data.name.trim(),
+        phone: cleanedPhone,
+        address: data.address?.trim() || null,
         image: data.image || null,
         openingBalance: data.openingBalance,
       },
@@ -182,11 +187,16 @@ export async function updateClient(data: {
       return { success: false, error: "প্রতিষ্ঠানটি খুঁজে পাওয়া যায়নি।" };
     }
 
+    const cleanedPhone = data.phone?.replace(/\D/g, "");
+    if (!cleanedPhone || cleanedPhone.length !== 11) {
+      return { success: false, error: "মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 017XXXXXXXX)!" };
+    }
+
     const updated = await prisma.client.update({
       where: { id: data.id },
       data: {
         name: data.name.trim(),
-        phone: data.phone.trim(),
+        phone: cleanedPhone,
         address: data.address?.trim() || null,
         ...(data.image !== undefined ? { image: data.image } : {}),
         ...(data.openingBalance !== undefined ? { openingBalance: data.openingBalance } : {}),

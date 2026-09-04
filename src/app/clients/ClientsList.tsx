@@ -162,6 +162,11 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
       return;
     }
 
+    if (editPhone.length !== 11) {
+      setEditError("মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 017XXXXXXXX)!");
+      return;
+    }
+
     setIsSavingEdit(true);
     setEditError("");
 
@@ -1478,13 +1483,20 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
 
               {/* Phone */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  মোবাইল নম্বর <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-700">
+                    মোবাইল নম্বর <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    {editPhone.length}/১১ ডিজিট
+                  </span>
+                </div>
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={11}
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
+                  onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
                   placeholder="যেমন: 01700000000"
                   className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-gray-900 font-mono"
                   required

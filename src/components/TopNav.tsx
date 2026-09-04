@@ -50,7 +50,7 @@ export default function TopNav({
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const userName = session?.user?.name || "Owner";
+  const rawLoginUsername = (session?.user as any)?.username || session?.user?.name || "owner";
   const userRole = (session?.user as any)?.role || "OWNER";
   const userEmail = session?.user?.email || "bolaka@erp.com";
 
@@ -58,10 +58,16 @@ export default function TopNav({
   const [userImage, setUserImage] = useState<string | null>(null);
   const [businessProfile, setBusinessProfile] = useState<any>({
     companyName: "BOLAKA FACTORY",
+    ownerName: "Hasibul Islam",
     phone: "01954223347",
     address: "ঢাকা, বাংলাদেশ",
     logo: null,
   });
+
+  // Display Name: For OWNER, always show the actual Owner's Name (e.g. "Hasibul Islam"), never the word "Owner"
+  const ownerDisplayName = userRole === "OWNER"
+    ? (businessProfile?.ownerName || (session?.user?.name && session.user.name.toLowerCase() !== "owner" ? session.user.name : "Hasibul Islam"))
+    : (userRole === "MANAGER" ? (session?.user?.name || "Manager") : (session?.user?.name || "User"));
 
   // User Profile Photo Modal
   const [isUserPhotoModalOpen, setIsUserPhotoModalOpen] = useState(false);
@@ -100,7 +106,7 @@ export default function TopNav({
     async function loadData() {
       try {
         const [uRes, bRes] = await Promise.all([
-          getUserProfile(userName),
+          getUserProfile(rawLoginUsername),
           getBusinessProfile(),
         ]);
 
@@ -115,6 +121,9 @@ export default function TopNav({
               localStorage.setItem("erp_business_name", bRes.profile.companyName || "BOLAKA FACTORY");
               localStorage.setItem("erp_business_phone", bRes.profile.phone || "");
               localStorage.setItem("erp_business_address", bRes.profile.address || "");
+              if (bRes.profile.ownerName) {
+                localStorage.setItem("erp_owner_name", bRes.profile.ownerName);
+              }
               window.dispatchEvent(new Event("businessProfileUpdated"));
             } catch (e) {
               // ignore
@@ -130,7 +139,7 @@ export default function TopNav({
     return () => {
       mounted = false;
     };
-  }, [userName]);
+  }, [rawLoginUsername]);
 
   const fetchManagers = async () => {
     setIsLoadingManagers(true);
@@ -154,7 +163,7 @@ export default function TopNav({
 
   const openBusinessModal = (tab: "company" | "owner" | "manager" = "company") => {
     setBizName(businessProfile?.companyName || "BOLAKA FACTORY");
-    setBizOwnerName(businessProfile?.ownerName || userName || "Hasibul Islam");
+    setBizOwnerName(businessProfile?.ownerName || (rawLoginUsername.toLowerCase() !== "owner" ? rawLoginUsername : "Hasibul Islam"));
     setBizOwnerPhoto(businessProfile?.ownerPhoto || userImage || null);
     setBizPhone(businessProfile?.phone || "");
     setBizAddress(businessProfile?.address || "");
@@ -262,7 +271,7 @@ export default function TopNav({
   const handleSaveUserPhoto = async () => {
     setIsSavingUserPhoto(true);
     try {
-      const res = await updateUserProfilePhoto(userName, previewUserPhoto);
+      const res = await updateUserProfilePhoto(rawLoginUsername, previewUserPhoto);
       if (res.success) {
         setUserImage(previewUserPhoto);
         setIsUserPhotoModalOpen(false);
@@ -301,6 +310,12 @@ export default function TopNav({
 
   const handleSaveBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (bizPhone.trim() && bizPhone.trim().length !== 11) {
+      alert("কোম্পানির মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 019XXXXXXXX)!");
+      return;
+    }
+
     setIsSavingBiz(true);
     try {
       const res = await updateBusinessProfile({
@@ -316,13 +331,16 @@ export default function TopNav({
         setBusinessProfile(res.profile);
         if (bizOwnerPhoto && userRole === "OWNER") {
           setUserImage(bizOwnerPhoto);
-          await updateUserProfilePhoto(userName, bizOwnerPhoto);
+          await updateUserProfilePhoto(rawLoginUsername, bizOwnerPhoto);
         }
         try {
           localStorage.setItem("erp_business_logo", res.profile.logo || "");
           localStorage.setItem("erp_business_name", res.profile.companyName || "BOLAKA FACTORY");
           localStorage.setItem("erp_business_phone", res.profile.phone || "");
           localStorage.setItem("erp_business_address", res.profile.address || "");
+          if (res.profile.ownerName) {
+            localStorage.setItem("erp_owner_name", res.profile.ownerName);
+          }
           window.dispatchEvent(new Event("businessProfileUpdated"));
         } catch (e) {
           // ignore
@@ -411,14 +429,14 @@ export default function TopNav({
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-slate-900 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm shrink-0 border border-gray-200">
               {userImage ? (
-                <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+                <img src={userImage} alt={ownerDisplayName} className="w-full h-full object-cover" />
               ) : (
-                userName.charAt(0)
+                ownerDisplayName.charAt(0).toUpperCase()
               )}
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-xs font-bold text-gray-900 capitalize leading-tight">
-                {userName}
+                {ownerDisplayName}
               </p>
               <span
                 className={`inline-block text-[9px] font-black uppercase px-1.5 py-0.2 rounded ${
@@ -451,9 +469,9 @@ export default function TopNav({
                     <div className="relative group shrink-0">
                       <div className="w-11 h-11 rounded-full overflow-hidden bg-slate-900 text-white flex items-center justify-center font-bold text-sm uppercase shadow-sm border border-gray-200">
                         {userImage ? (
-                          <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+                          <img src={userImage} alt={ownerDisplayName} className="w-full h-full object-cover" />
                         ) : (
-                          userName.charAt(0)
+                          ownerDisplayName.charAt(0).toUpperCase()
                         )}
                       </div>
                       <button
@@ -465,7 +483,7 @@ export default function TopNav({
                       </button>
                     </div>
                     <div className="overflow-hidden flex-1">
-                      <p className="text-sm font-bold text-gray-900 truncate">{userName}</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{ownerDisplayName}</p>
                       <p className="text-xs text-gray-500 truncate">{userEmail}</p>
                       <button
                         onClick={openUserPhotoModal}
@@ -589,13 +607,13 @@ export default function TopNav({
                   <img src={previewUserPhoto} alt="User Preview" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-slate-900 text-white flex items-center justify-center text-3xl font-bold uppercase">
-                    {userName.charAt(0)}
+                    {ownerDisplayName.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
 
               <div>
-                <p className="text-sm font-bold text-gray-800">{userName}</p>
+                <p className="text-sm font-bold text-gray-800">{ownerDisplayName}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   আপনার অ্যাকাউন্টের জন্য স্পষ্ট একটি প্রোফাইল ছবি আপলোড করুন।
                 </p>
@@ -786,15 +804,22 @@ export default function TopNav({
 
                   {/* Phone */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">
-                      অফিসিয়াল মোবাইল / ফোন
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-gray-700">
+                        অফিসিয়াল মোবাইল / ফোন
+                      </label>
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        {bizPhone.length}/১১ ডিজিট
+                      </span>
+                    </div>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={11}
                       value={bizPhone}
-                      onChange={(e) => setBizPhone(e.target.value)}
+                      onChange={(e) => setBizPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
                       placeholder="01954223347"
-                      className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-gray-900"
+                      className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-gray-900 font-mono"
                     />
                   </div>
 
@@ -900,7 +925,7 @@ export default function TopNav({
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
                     <div>
                       <span className="text-xs font-bold text-slate-700 block">লগইন ইউজারনেম:</span>
-                      <span className="text-sm font-black text-slate-900">{userName}</span>
+                      <span className="text-sm font-black text-slate-900">{rawLoginUsername}</span>
                     </div>
                     <span className="text-xs bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">
                       প্রধান মালিক (Primary Owner)

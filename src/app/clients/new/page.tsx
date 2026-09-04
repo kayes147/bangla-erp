@@ -44,6 +44,11 @@ export default function AddNewClient() {
       return;
     }
 
+    if (phone.length !== 11) {
+      setErrorMessage("মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 017XXXXXXXX)!");
+      return;
+    }
+
     setLoading(true);
 
     let openingBalance = parseFloat(amount) || 0;
@@ -174,17 +179,25 @@ export default function AddNewClient() {
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-extrabold text-gray-900 mb-2">
-                মোবাইল নম্বর <span className="text-[10px] font-normal text-gray-400 uppercase">(Phone)</span> <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-extrabold text-gray-900">
+                  মোবাইল নম্বর <span className="text-[10px] font-normal text-gray-400 uppercase">(Phone)</span> <span className="text-red-500">*</span>
+                </label>
+                <span className="text-xs font-mono font-bold text-gray-400">
+                  {phone.length}/১১ ডিজিট
+                </span>
+              </div>
               <input 
                 type="tel" 
+                inputMode="numeric"
+                maxLength={11}
                 value={phone} 
-                onChange={(e) => setPhone(e.target.value)} 
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))} 
                 placeholder="যেমন: 01700000000" 
-                className="w-full p-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-950 bg-white" 
+                className="w-full p-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-bold text-gray-950 bg-white font-mono" 
                 required 
               />
+              <p className="text-[11px] text-gray-400 mt-1">শুধুমাত্র ১১টি ডিজিট (যেমন: 017XXXXXXXX)</p>
             </div>
 
             {/* Address */}

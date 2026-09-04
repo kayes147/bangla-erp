@@ -89,12 +89,21 @@ export async function registerUser(data: {
 
     // 3. Upsert Company Business Profile
     const finalCompanyName = data.companyName?.trim() || "BOLAKA FACTORY";
+    let cleanedCompanyPhone = null;
+    if (data.companyPhone && data.companyPhone.trim()) {
+      const cleaned = data.companyPhone.replace(/\D/g, "");
+      if (cleaned.length !== 11) {
+        return { success: false, error: "কোম্পানির মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 019XXXXXXXX)!" };
+      }
+      cleanedCompanyPhone = cleaned;
+    }
+
     await prisma.businessProfile.upsert({
       where: { id: "default" },
       update: {
         companyName: finalCompanyName,
         ownerName: data.name?.trim() || "Hasibul Islam",
-        ...(data.companyPhone !== undefined && { phone: data.companyPhone }),
+        ...(cleanedCompanyPhone !== null && { phone: cleanedCompanyPhone }),
         ...(data.companyAddress !== undefined && { address: data.companyAddress }),
         ...(data.companyEmail !== undefined && { email: data.companyEmail }),
         ...(data.companyLogo !== undefined && { logo: data.companyLogo }),
@@ -104,7 +113,7 @@ export async function registerUser(data: {
         id: "default",
         companyName: finalCompanyName,
         ownerName: data.name?.trim() || "Hasibul Islam",
-        phone: data.companyPhone || null,
+        phone: cleanedCompanyPhone || null,
         address: data.companyAddress || null,
         email: data.companyEmail || null,
         logo: data.companyLogo || null,

@@ -18,6 +18,11 @@ export default function AddNewEmployee() {
     e.preventDefault();
     if (!name || !phone || !salaryAmount) return;
 
+    if (phone.replace(/\D/g, "").length !== 11) {
+      alert("মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 017XXXXXXXX)!");
+      return;
+    }
+
     setLoading(true);
 
     const res = await createEmployee({
@@ -76,8 +81,23 @@ export default function AddNewEmployee() {
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">মোবাইল নম্বর <span className="text-[10px] font-normal text-gray-400 uppercase">(Phone)</span> <span className="text-red-500">*</span></label>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 01700000000" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none transition-all font-bold text-gray-800" required />
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-bold text-gray-700">মোবাইল নম্বর <span className="text-[10px] font-normal text-gray-400 uppercase">(Phone)</span> <span className="text-red-500">*</span></label>
+                <span className="text-xs font-mono font-bold text-gray-400">
+                  {phone.length}/১১ ডিজিট
+                </span>
+              </div>
+              <input 
+                type="tel" 
+                inputMode="numeric"
+                maxLength={11}
+                value={phone} 
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))} 
+                placeholder="যেমন: 01700000000" 
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none transition-all font-bold text-gray-800 font-mono" 
+                required 
+              />
+              <p className="text-[11px] text-gray-400 mt-1">শুধুমাত্র ১১টি ডিজিট (যেমন: 017XXXXXXXX)</p>
             </div>
 
             {/* Designation */}

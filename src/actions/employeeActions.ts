@@ -29,12 +29,17 @@ export async function createEmployee(data: {
   salaryAmount: number;
 }) {
   try {
+    const cleanedPhone = data.phone?.replace(/\D/g, "");
+    if (!cleanedPhone || cleanedPhone.length !== 11) {
+      return { success: false, error: "মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 017XXXXXXXX)!" };
+    }
+
     const employee = await prisma.employee.create({
       data: {
-        name: data.name,
-        phone: data.phone,
+        name: data.name.trim(),
+        phone: cleanedPhone,
         type: data.type,
-        designation: data.designation,
+        designation: data.designation?.trim() || null,
         salaryAmount: data.salaryAmount,
       }
     });

@@ -57,13 +57,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           (username === "manager" && (password === "123" || password === "1234"))
         ) {
           try {
-            const dbUser = await prisma.user.findUnique({
-              where: { username },
-            });
+            const [dbUser, biz] = await Promise.all([
+              prisma.user.findUnique({ where: { username } }),
+              prisma.businessProfile.findFirst(),
+            ]);
             if (dbUser) {
+              const displayName = (dbUser.role === "OWNER" && biz?.ownerName) 
+                ? biz.ownerName 
+                : dbUser.username;
               return {
                 id: dbUser.id,
-                name: dbUser.username,
+                name: displayName,
+                username: dbUser.username,
                 role: dbUser.role,
               };
             }
@@ -74,17 +79,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Fallback if DB is temporarily cold or starting
           return {
             id: username === "owner" ? "owner-root-id" : "manager-root-id",
-            name: username,
+            name: username === "owner" ? "Hasibul Islam" : username,
+            username: username,
             role: username === "owner" ? "OWNER" : "MANAGER",
           };
         }
 
         // 2. Standard DB user verification for registered users
         try {
-          const user = await prisma.user.findUnique({
-            where: { username },
-            include: { client: true },
-          });
+          const [user, biz] = await Promise.all([
+            prisma.user.findUnique({
+              where: { username },
+              include: { client: true },
+            }),
+            prisma.businessProfile.findFirst(),
+          ]);
 
           if (!user) return null;
 
@@ -95,9 +104,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (!isMatch) return null;
 
+          let resolvedName = user.client?.name || user.username;
+          if (user.role === "OWNER" && biz?.ownerName) {
+            resolvedName = biz.ownerName;
+          }
+
           return {
             id: user.id,
-            name: user.client?.name || user.username,
+            name: resolvedName,
+            username: user.username,
             role: user.role,
             clientId: user.clientId || null,
           };
@@ -114,6 +129,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.role = (user as any).role;
         token.clientId = (user as any).clientId;
+        token.username = (user as any).username;
       }
       return token;
     },
@@ -122,6 +138,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         (session.user as any).role = token.role as string;
         (session.user as any).clientId = token.clientId as string;
+        (session.user as any).username = token.username as string;
       }
       return session;
     },

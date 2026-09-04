@@ -28,6 +28,7 @@ export async function getBusinessProfile() {
       profile: {
         id: "default",
         companyName: "BOLAKA FACTORY",
+        ownerName: "Hasibul Islam",
         phone: "01954223347",
         address: "ঢাকা, বাংলাদেশ",
         logo: null,
@@ -46,12 +47,21 @@ export async function updateBusinessProfile(data: {
   ownerPhoto?: string | null;
 }) {
   try {
+    let cleanedPhone = data.phone;
+    if (data.phone && data.phone.trim()) {
+      const cleaned = data.phone.replace(/\D/g, "");
+      if (cleaned.length !== 11) {
+        return { success: false, error: "কোম্পানির মোবাইল নম্বর অবশ্যই ঠিক ১১ ডিজিটের হতে হবে (যেমন: 019XXXXXXXX)!" };
+      }
+      cleanedPhone = cleaned;
+    }
+
     const profile = await prisma.businessProfile.upsert({
       where: { id: "default" },
       update: {
         ...(data.companyName !== undefined && { companyName: data.companyName }),
         ...(data.ownerName !== undefined && { ownerName: data.ownerName }),
-        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(cleanedPhone !== undefined && { phone: cleanedPhone }),
         ...(data.address !== undefined && { address: data.address }),
         ...(data.logo !== undefined && { logo: data.logo }),
         ...(data.ownerPhoto !== undefined && { ownerPhoto: data.ownerPhoto }),
@@ -60,7 +70,7 @@ export async function updateBusinessProfile(data: {
         id: "default",
         companyName: data.companyName || "BOLAKA FACTORY",
         ownerName: data.ownerName || "Hasibul Islam",
-        phone: data.phone || "01954223347",
+        phone: cleanedPhone || "01954223347",
         address: data.address || "ঢাকা, বাংলাদেশ",
         logo: data.logo || null,
         ownerPhoto: data.ownerPhoto || null,
