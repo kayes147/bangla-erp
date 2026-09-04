@@ -47,21 +47,26 @@ export default function LoginPage() {
 
         const cleanUser = username.toLowerCase().trim();
         if (cleanUser === "kayes147@") {
-          window.location.href = "/super-admin";
+          router.replace("/super-admin");
+          router.refresh();
+        } else if (cleanUser === "owner" || cleanUser === "manager") {
+          router.replace("/");
+          router.refresh();
         } else {
           try {
             const sessionRes = await fetch("/api/auth/session");
             const sessionData = await sessionRes.json();
             if (sessionData?.user?.role === "CLIENT") {
-              window.location.href = "/portal/dashboard";
+              router.replace("/portal/dashboard");
             } else if (sessionData?.user?.role === "SUPER_ADMIN") {
-              window.location.href = "/super-admin";
+              router.replace("/super-admin");
             } else {
-              window.location.href = "/";
+              router.replace("/");
             }
           } catch {
-            window.location.href = "/";
+            router.replace("/");
           }
+          router.refresh();
         }
       }
     } catch (err: any) {

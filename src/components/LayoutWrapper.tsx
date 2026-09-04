@@ -26,7 +26,15 @@ export default function LayoutWrapper({
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  // Pages that should NOT have the Sidebar and TopNav
+  const isAuthPage = 
+    pathname === "/login" || 
+    pathname === "/register" || 
+    pathname === "/portal/login" || 
+    pathname === "/select-company";
+
   const checkNotificationCounts = useCallback(async () => {
+    if (isAuthPage) return;
     try {
       const res = await fetch("/api/notifications/count", { cache: "no-store" });
       if (res.ok) {
@@ -37,21 +45,25 @@ export default function LayoutWrapper({
     } catch (e) {
       // ignore transient fetch error
     }
-  }, []);
+  }, [isAuthPage]);
 
-  // Fetch count on mount, on route change, and every 10 seconds for live updates
+  // Fetch count on mount and every 60 seconds (with instant revalidation on tab focus)
   useEffect(() => {
-    checkNotificationCounts();
-    const interval = setInterval(checkNotificationCounts, 10000);
-    return () => clearInterval(interval);
-  }, [checkNotificationCounts, pathname]);
+    if (isAuthPage) return;
 
-  // Pages that should NOT have the Sidebar and TopNav
-  const isAuthPage = 
-    pathname === "/login" || 
-    pathname === "/register" || 
-    pathname === "/portal/login" || 
-    pathname === "/select-company";
+    checkNotificationCounts();
+    const interval = setInterval(checkNotificationCounts, 60000);
+
+    const onFocus = () => {
+      checkNotificationCounts();
+    };
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [checkNotificationCounts, isAuthPage]);
   
   const isSuperAdmin = pathname.startsWith("/super-admin");
   const userRole = (session?.user as any)?.role;

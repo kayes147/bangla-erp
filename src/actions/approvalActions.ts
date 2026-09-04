@@ -6,40 +6,41 @@ import { recordAuditLog } from "./auditLogActions";
 
 export async function getPendingApprovals() {
   try {
-    // 1. Pending Invoices (Product In/Out)
-    const pendingInvoices = await prisma.invoice.findMany({
-      where: { status: "PENDING" },
-      include: {
-        client: true,
-        items: {
-          include: { product: true }
-        }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-
-    // 2. Pending Expenses
-    const pendingExpenses = await prisma.expense.findMany({
-      where: { status: "PENDING" },
-      include: {
-        category: true,
-        employee: true,
-      },
-      orderBy: { createdAt: "desc" }
-    });
-
-    // 3. Pending Transactions (Main Cash)
-    const pendingTransactions = await prisma.transaction.findMany({
-      where: { 
-        status: "PENDING",
-        invoiceId: null, // Don't fetch transactions that are tied to pending invoices (they get approved when invoice does)
-        expense: null    // Don't fetch transactions tied to pending expenses
-      },
-      include: {
-        client: true,
-      },
-      orderBy: { createdAt: "desc" }
-    });
+    // Concurrently fetch pending items in parallel
+    const [pendingInvoices, pendingExpenses, pendingTransactions] = await Promise.all([
+      // 1. Pending Invoices (Product In/Out)
+      prisma.invoice.findMany({
+        where: { status: "PENDING" },
+        include: {
+          client: true,
+          items: {
+            include: { product: true }
+          }
+        },
+        orderBy: { createdAt: "desc" }
+      }),
+      // 2. Pending Expenses
+      prisma.expense.findMany({
+        where: { status: "PENDING" },
+        include: {
+          category: true,
+          employee: true,
+        },
+        orderBy: { createdAt: "desc" }
+      }),
+      // 3. Pending Transactions (Main Cash)
+      prisma.transaction.findMany({
+        where: { 
+          status: "PENDING",
+          invoiceId: null, // Don't fetch transactions that are tied to pending invoices (they get approved when invoice does)
+          expense: null    // Don't fetch transactions tied to pending expenses
+        },
+        include: {
+          client: true,
+        },
+        orderBy: { createdAt: "desc" }
+      })
+    ]);
 
     return { 
       success: true, 

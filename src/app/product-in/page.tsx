@@ -1,5 +1,5 @@
 import { getInvoices } from "@/actions/invoiceActions";
-import { getClients } from "@/actions/clientActions";
+import { getClientsSummary } from "@/actions/clientActions";
 import ProductInClient from "./ProductInClient";
 import { auth } from "@/auth";
 
@@ -8,13 +8,13 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 export default async function ProductInPage() {
-  const session = await auth();
-  const mockRole = session?.user?.name || "owner";
+  const [session, { invoices }, { clients }] = await Promise.all([
+    auth(),
+    getInvoices("product_in"),
+    getClientsSummary(),
+  ]);
 
-  const { invoices } = await getInvoices("product_in");
-  const { clients } = await getClients();
-  
-  // Allow all registered parties
+  const mockRole = session?.user?.name || "owner";
   const allClients = clients || [];
 
   return (

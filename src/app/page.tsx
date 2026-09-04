@@ -57,91 +57,129 @@ export default async function Home() {
   let pendingData: { invoices: any[]; expenses: any[]; transactions: any[] } = { invoices: [], expenses: [], transactions: [] };
 
   try {
-    // 1. Calculate Main Cash and get all transactions sorted newest first
-    allTransactions = await prisma.transaction.findMany({
-      orderBy: { date: "desc" },
-      include: {
-        client: true,
-        invoice: {
-          include: {
-            client: true
+    // Parallel optimized dashboard data fetch
+    const [
+      allCashTx,
+      recentTransactions,
+      monthInvoices,
+      monthExpenses,
+      allInvoicesForDue,
+      clientsWithOpeningDue,
+      allProducts,
+      pending
+    ] = await Promise.all([
+      // 1. All cash transactions (minimal select for Main Cash)
+      prisma.transaction.findMany({
+        select: { type: true, amount: true }
+      }),
+
+      // 2. Recent 10 transactions (only 10 rows with lightweight relations)
+      prisma.transaction.findMany({
+        take: 10,
+        orderBy: { date: "desc" },
+        include: {
+          client: { select: { name: true } },
+          invoice: { select: { client: { select: { name: true } } } }
+        }
+      }),
+
+      // 3. Invoices from monthStart (derives today's sales/purchases + month's sales/purchases + profit)
+      prisma.invoice.findMany({
+        where: { date: { gte: monthStart } },
+        select: {
+          id: true,
+          type: true,
+          date: true,
+          totalAmount: true,
+          paidAmount: true,
+          items: {
+            select: { quantity: true }
           }
         }
-      }
-    });
+      }),
 
-    mainCash = allTransactions.reduce((acc, t) => {
+      // 4. Expenses from monthStart (derives today's expenses + month's expenses)
+      prisma.expense.findMany({
+        where: { date: { gte: monthStart } },
+        select: {
+          id: true,
+          amount: true,
+          date: true
+        }
+      }),
+
+      // 5. Total due from invoices (lean select)
+      prisma.invoice.findMany({
+        select: { totalAmount: true, paidAmount: true }
+      }),
+
+      // 6. Clients with positive opening balance (lean select)
+      prisma.client.findMany({
+        where: { openingBalance: { gt: 0 } },
+        select: { openingBalance: true }
+      }),
+
+      // 7. Inventory products (lean select)
+      prisma.product.findMany({
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          stock: true,
+          invoiceItems: {
+            select: {
+              quantity: true,
+              invoice: { select: { type: true } }
+            }
+          }
+        },
+        orderBy: { updatedAt: "desc" }
+      }),
+
+      // 8. Pending Approvals
+      getPendingApprovals()
+    ]);
+
+    // 1. Calculate Main Cash
+    mainCash = allCashTx.reduce((acc, t) => {
       return t.type === 'in' ? acc + t.amount : acc - t.amount;
     }, 0);
+    allTransactions = recentTransactions;
 
     // 2. Calculate Today's Expenses (from 00:00 BST today)
-    todaysExpenses = await prisma.expense.findMany({
-      where: { date: { gte: todayStart } }
-    });
+    todaysExpenses = monthExpenses.filter(e => e.date >= todayStart);
     dailyExpenseTotal = todaysExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     // 3. Today's Product Out (Sales)
-    const todaysSales = await prisma.invoice.findMany({
-      where: { type: 'product_out', date: { gte: todayStart } },
-      include: { items: true }
-    });
+    const todaysSales = monthInvoices.filter(i => i.type === 'product_out' && i.date >= todayStart);
     salesTotal = todaysSales.reduce((sum, s) => sum + s.totalAmount, 0);
     salesReceived = todaysSales.reduce((sum, s) => sum + s.paidAmount, 0);
     salesDue = salesTotal - salesReceived;
     salesProductCount = todaysSales.reduce((sum, s) => sum + s.items.reduce((q, item) => q + item.quantity, 0), 0);
 
     // 4. Today's Product In (Purchases)
-    const todaysPurchases = await prisma.invoice.findMany({
-      where: { type: 'product_in', date: { gte: todayStart } },
-      include: { items: true }
-    });
+    const todaysPurchases = monthInvoices.filter(i => i.type === 'product_in' && i.date >= todayStart);
     purchasesTotal = todaysPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
     purchasesPaid = todaysPurchases.reduce((sum, p) => sum + p.paidAmount, 0);
     purchasesDue = purchasesTotal - purchasesPaid;
     purchasesProductCount = todaysPurchases.reduce((sum, p) => sum + p.items.reduce((q, item) => q + item.quantity, 0), 0);
 
     // 5. Total Due (ব্যবসায়ের মোট অপরিশোধিত বকেয়া হিসাব - exactly matching /loan)
-    const [allInvoices, allClients] = await Promise.all([
-      prisma.invoice.findMany(),
-      prisma.client.findMany({ select: { openingBalance: true } }),
-    ]);
-    const invoiceDue = allInvoices.reduce((sum, inv) => {
+    const invoiceDue = allInvoicesForDue.reduce((sum, inv) => {
       return sum + Math.max(0, inv.totalAmount - inv.paidAmount);
     }, 0);
-    const clientOpeningDue = allClients.reduce((sum, client) => {
+    const clientOpeningDue = clientsWithOpeningDue.reduce((sum, client) => {
       return sum + Math.max(0, client.openingBalance);
     }, 0);
     totalDueReceivable = invoiceDue + clientOpeningDue;
 
     // 6. Monthly Profit (from 1st of month BST)
-    const monthlySales = await prisma.invoice.findMany({
-      where: { type: 'product_out', date: { gte: monthStart } }
-    });
-    const monthlyPurchases = await prisma.invoice.findMany({
-      where: { type: 'product_in', date: { gte: monthStart } }
-    });
-    const monthlyExpenses = await prisma.expense.findMany({
-      where: { date: { gte: monthStart } }
-    });
-    
-    const mSalesTotal = monthlySales.reduce((sum, s) => sum + s.totalAmount, 0);
-    const mPurchasesTotal = monthlyPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
-    const mExpensesTotal = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
-    
+    const mSalesTotal = monthInvoices.filter(i => i.type === 'product_out').reduce((sum, s) => sum + s.totalAmount, 0);
+    const mPurchasesTotal = monthInvoices.filter(i => i.type === 'product_in').reduce((sum, p) => sum + p.totalAmount, 0);
+    const mExpensesTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
     monthlyProfit = mSalesTotal - mPurchasesTotal - mExpensesTotal;
 
     // 7. Inventory (পণ্যের ইন, আউট ও পরিমাপ)
-    const allProducts = await prisma.product.findMany({
-      include: {
-        invoiceItems: {
-          include: {
-            invoice: true
-          }
-        }
-      },
-      orderBy: { updatedAt: "desc" }
-    });
-
     inventoryList = allProducts.map((p) => {
       let totalIn = 0;
       let totalOut = 0;
@@ -169,7 +207,6 @@ export default async function Home() {
     });
 
     // 8. Approvals
-    const pending = await getPendingApprovals();
     pendingData = pending;
     totalPending = (pending.invoices?.length || 0) + (pending.expenses?.length || 0) + (pending.transactions?.length || 0);
   } catch (err) {

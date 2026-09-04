@@ -12,8 +12,32 @@ export default async function NotificationsPage() {
   try {
     const now = new Date();
 
-    // 1. Pending Approvals
-    const pending = await getPendingApprovals();
+    // Fetch pending approvals, overdue invoices, and audit logs concurrently in parallel
+    const [pending, overdueInvoices, auditLogs] = await Promise.all([
+      getPendingApprovals(),
+      prisma.invoice.findMany({
+        where: {
+          dueDate: {
+            lte: now,
+          },
+        },
+        include: {
+          client: { select: { id: true, name: true } },
+        },
+        orderBy: {
+          dueDate: "desc",
+        },
+      }),
+      prisma.auditLog.findMany({
+        take: 25,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          user: { select: { id: true, username: true } },
+        },
+      }),
+    ]);
 
     // Invoices pending
     if (pending.invoices) {
@@ -76,20 +100,6 @@ export default async function NotificationsPage() {
     }
 
     // 2. Overdue Dues (তারিখ পার হওয়া বকেয়া)
-    const overdueInvoices = await prisma.invoice.findMany({
-      where: {
-        dueDate: {
-          lte: now,
-        },
-      },
-      include: {
-        client: true,
-      },
-      orderBy: {
-        dueDate: "desc",
-      },
-    });
-
     for (const inv of overdueInvoices) {
       const remaining = inv.totalAmount - inv.paidAmount;
       if (remaining > 0) {
@@ -111,17 +121,6 @@ export default async function NotificationsPage() {
         });
       }
     }
-
-    // 3. Audit Logs (Recent system activities)
-    const auditLogs = await prisma.auditLog.findMany({
-      take: 25,
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        user: true,
-      },
-    });
 
     for (const log of auditLogs) {
       const userName = log.user?.username || "ইউজার";

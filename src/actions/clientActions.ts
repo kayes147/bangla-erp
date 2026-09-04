@@ -217,18 +217,51 @@ export async function updateClient(data: {
   }
 }
 
+export async function getClientsSummary() {
+  try {
+    const clients = await prisma.client.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        type: true,
+        name: true,
+        phone: true,
+        address: true,
+        openingBalance: true,
+        createdAt: true,
+      },
+    });
+    return { success: true, clients };
+  } catch (error) {
+    console.error("Error fetching clients summary:", error);
+    return { success: false, error: "Failed to fetch clients summary", clients: [] };
+  }
+}
+
 export async function getClients() {
   try {
     const clients = await prisma.client.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        user: true, // to check if they have login access
+        user: {
+          select: {
+            id: true,
+            username: true,
+            role: true,
+          },
+        },
         invoices: {
           orderBy: { date: "desc" },
           include: {
             items: {
               include: {
-                product: true,
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                  },
+                },
               },
             },
           },
