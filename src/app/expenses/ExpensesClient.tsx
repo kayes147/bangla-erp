@@ -55,15 +55,19 @@ export default function ExpensesClient({
     setIsAdvance(checked);
     const selectedEmp = employees.find((emp: any) => emp.id === employeeId);
     const empName = selectedEmp ? selectedEmp.name : customEmployeeName;
+    const isLabor = category === "Daily Labor";
+    const advanceTitle = isLabor ? "দিনমজুরি অগ্রিম (Wage Advance)" : "বেতন অগ্রিম (Salary Advance)";
+    const normalTitle = isLabor ? "দিনমজুরি বাবদ" : "খরচ বাবদ";
+
     if (checked) {
       if (empName) {
-        setDescription(`${empName} - বেতন অগ্রিম (Salary Advance)`);
+        setDescription(`${empName} - ${advanceTitle}`);
       } else {
-        setDescription(`বেতন অগ্রিম (Salary Advance)`);
+        setDescription(advanceTitle);
       }
     } else {
       if (empName) {
-        setDescription(`${empName} - খরচ বাবদ`);
+        setDescription(`${empName} - ${normalTitle}`);
       }
     }
   };
@@ -78,7 +82,8 @@ export default function ExpensesClient({
           const reason = isAdvance ? "বেতন অগ্রিম (Salary Advance)" : "খরচ বাবদ";
           setDescription(`${selected.name} (${selected.designation || "কর্মী"}) - ${reason}`);
         } else if (category === "Daily Labor") {
-          setDescription(`${selected.name} (${selected.designation || "দিনমজুর"}) - দিনমজুরি বাবদ`);
+          const reason = isAdvance ? "দিনমজুরি অগ্রিম (Wage Advance)" : "দিনমজুরি বাবদ";
+          setDescription(`${selected.name} (${selected.designation || "দিনমজুর"}) - ${reason}`);
         }
       }
     } else if (empId === "CUSTOM_NEW") {
@@ -527,8 +532,8 @@ export default function ExpensesClient({
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-start">
-                        {/* Employee Name Select Dropdown */}
-                        <div className={category === "Employee" ? "sm:col-span-2" : "sm:col-span-3"}>
+                        {/* Employee / Labor Name Select Dropdown */}
+                        <div className="sm:col-span-2">
                           <select
                             value={employeeId}
                             onChange={(e) => handleSelectEmployee(e.target.value)}
@@ -547,8 +552,8 @@ export default function ExpensesClient({
                           </select>
                         </div>
 
-                        {/* Advance Box on the side when Employee is selected */}
-                        {category === "Employee" && (
+                        {/* Advance Box on the side for both Employee and Daily Labor */}
+                        {isEmployeeCategory && (
                           <div className="sm:col-span-1">
                             <label className={`flex items-center space-x-2 p-2.5 rounded-lg border-2 cursor-pointer transition-all select-none ${
                               isAdvance 
@@ -567,7 +572,7 @@ export default function ExpensesClient({
                                   {isAdvance && <span className="text-[9px] bg-amber-600 text-white px-1 rounded font-mono">হ্যাঁ</span>}
                                 </span>
                                 <span className="text-[10px] text-gray-500 font-normal">
-                                  বেতন থেকে কর্তনযোগ্য
+                                  {category === "Daily Labor" ? "মজুরি থেকে কর্তনযোগ্য" : "বেতন থেকে কর্তনযোগ্য"}
                                 </span>
                               </div>
                             </label>
@@ -585,7 +590,10 @@ export default function ExpensesClient({
                               value={customEmployeeName}
                               onChange={(e) => {
                                 setCustomEmployeeName(e.target.value);
-                                const prefix = category === "Employee" ? (isAdvance ? "বেতন অগ্রিম:" : "কর্মচারী:") : "দিনমজুর:";
+                                const isLabor = category === "Daily Labor";
+                                const prefix = isLabor 
+                                  ? (isAdvance ? "দিনমজুরি অগ্রিম:" : "দিনমজুর:") 
+                                  : (isAdvance ? "বেতন অগ্রিম:" : "কর্মচারী:");
                                 setDescription(`${prefix} ${e.target.value}`);
                               }}
                               placeholder="যেমন: মো: রফিক"
