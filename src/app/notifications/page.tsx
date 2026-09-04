@@ -1,12 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { getPendingApprovals } from "@/actions/approvalActions";
 import NotificationsClient, { NotificationItem } from "./NotificationsClient";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 export default async function NotificationsPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   const notifications: NotificationItem[] = [];
 
   try {

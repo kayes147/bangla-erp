@@ -2,12 +2,19 @@ import Link from 'next/link';
 import { Users, UserPlus } from "lucide-react";
 import { getClients } from '@/actions/clientActions';
 import ClientsList from './ClientsList';
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 export default async function Clients() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   const { clients } = await getClients();
 
   return (

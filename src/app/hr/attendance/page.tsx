@@ -1,10 +1,17 @@
 import { getEmployees } from "@/actions/employeeActions";
 import { getAttendances } from "@/actions/attendanceActions";
 import AttendanceClient from "./AttendanceClient";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function AttendancePage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   const { employees } = await getEmployees();
   
   // By default, get today's date string in YYYY-MM-DD

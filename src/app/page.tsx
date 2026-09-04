@@ -17,6 +17,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { getPendingApprovals } from "@/actions/approvalActions";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 // Enforce real-time dynamic rendering on every request with zero cache
 export const dynamic = "force-dynamic";
@@ -24,6 +26,18 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 export default async function Home() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  const userRole = (session.user as any)?.role;
+  if (userRole === "CLIENT") {
+    redirect("/portal/dashboard");
+  }
+  if (userRole === "SUPER_ADMIN") {
+    redirect("/super-admin");
+  }
   // Calculate today start and month start in Bangladesh Standard Time (UTC+6)
   const now = new Date();
   const bstTime = new Date(now.getTime() + 6 * 3600 * 1000);

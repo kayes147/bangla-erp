@@ -1,11 +1,18 @@
 import { getEmployees } from "@/actions/employeeActions";
 import EmployeeList from "./EmployeeList";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { Users, UserPlus, Banknote } from "lucide-react";
 
 export default async function SalaryPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   const { employees } = await getEmployees();
 
   return (

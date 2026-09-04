@@ -1,9 +1,16 @@
 import { getMonthlyPayroll } from "@/actions/payrollActions";
 import PayrollClient from "./PayrollClient";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function PayrollPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   const data = await getMonthlyPayroll();
 
   return (

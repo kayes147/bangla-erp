@@ -14,7 +14,7 @@ export default function LayoutWrapper({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Dynamic notification & approval status
@@ -33,8 +33,15 @@ export default function LayoutWrapper({
     pathname === "/portal/login" || 
     pathname === "/select-company";
 
+  // Immediate redirect for unauthenticated users accessing protected pages
+  useEffect(() => {
+    if (!isAuthPage && status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [status, isAuthPage, router]);
+
   const checkNotificationCounts = useCallback(async () => {
-    if (isAuthPage) return;
+    if (isAuthPage || status !== "authenticated") return;
     try {
       const res = await fetch("/api/notifications/count", { cache: "no-store" });
       if (res.ok) {
@@ -45,11 +52,11 @@ export default function LayoutWrapper({
     } catch (e) {
       // ignore transient fetch error
     }
-  }, [isAuthPage]);
+  }, [isAuthPage, status]);
 
   // Fetch count on mount and every 60 seconds (with instant revalidation on tab focus)
   useEffect(() => {
-    if (isAuthPage) return;
+    if (isAuthPage || status !== "authenticated") return;
 
     checkNotificationCounts();
     const interval = setInterval(checkNotificationCounts, 60000);
@@ -63,44 +70,11 @@ export default function LayoutWrapper({
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
     };
-  }, [checkNotificationCounts, isAuthPage]);
+  }, [checkNotificationCounts, isAuthPage, status]);
   
   const isSuperAdmin = pathname.startsWith("/super-admin");
   const userRole = (session?.user as any)?.role;
   const isClient = userRole === "CLIENT";
-
-  // Session Persistence & Remember Me Enforcement
-  useEffect(() => {
-    if (isAuthPage || isSuperAdmin || !session) return;
-
-    try {
-      const isRemembered = localStorage.getItem("erp_remember_me") === "true";
-      const hasSessionStorage = sessionStorage.getItem("erp_session_active") === "true";
-      const hasSessionCookie = document.cookie
-        .split("; ")
-        .some((row) => row.startsWith("erp_session_active="));
-
-      // If user did NOT check "Remember Me" and quit/closed the browser:
-      // Both sessionStorage and session cookie are purged by the browser.
-      if (!isRemembered && !hasSessionStorage && !hasSessionCookie) {
-        signOut({ callbackUrl: "/login" });
-      } else {
-        // Active session confirmed: ensure session indicators are present
-        if (!hasSessionStorage) {
-          sessionStorage.setItem("erp_session_active", "true");
-        }
-        if (!hasSessionCookie) {
-          if (isRemembered) {
-            document.cookie = "erp_session_active=1; path=/; max-age=2592000; SameSite=Lax";
-          } else {
-            document.cookie = "erp_session_active=1; path=/; SameSite=Lax";
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Session persistence validation error:", e);
-    }
-  }, [session, isAuthPage, isSuperAdmin]);
 
   // If logged in as client and visiting an owner page, redirect to portal dashboard
   useEffect(() => {
@@ -111,7 +85,32 @@ export default function LayoutWrapper({
 
   const isClientPortal = (isClient || pathname.startsWith("/portal")) && !isAuthPage;
 
-  if (isAuthPage || isSuperAdmin) {
+  // 1. Auth pages (Login, Register, etc.) render directly
+  if (isAuthPage) {
+    return (
+      <div className="w-full h-full overflow-auto bg-slate-900">
+        {children}
+      </div>
+    );
+  }
+
+  // 2. Gatekeeper: If unauthenticated or loading on a protected route, never reveal ERP UI
+  if (status === "loading" || status === "unauthenticated" || !session) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-900 text-white">
+        <div className="flex flex-col items-center space-y-4 p-8 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-2xl backdrop-blur-md">
+          <div className="w-12 h-12 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
+          <div className="text-center space-y-1">
+            <h2 className="text-base font-bold text-white tracking-wide">নিরাপত্তা ও সেশন যাচাই হচ্ছে...</h2>
+            <p className="text-xs text-slate-400">অননুমোদিত প্রবেশ রোধ করা হচ্ছে</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Super admin layout
+  if (isSuperAdmin) {
     return (
       <div className="w-full h-full overflow-auto bg-slate-900">
         {children}

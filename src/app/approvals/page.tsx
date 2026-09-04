@@ -11,7 +11,10 @@ export const fetchCache = "force-no-store";
 export default async function ApprovalsPage() {
   const session = await auth();
   
-  if (!session || session.user?.role !== "OWNER") {
+  if (!session?.user) {
+    redirect("/login");
+  }
+  if (session.user?.role !== "OWNER") {
     redirect("/"); // Only OWNER can access approvals
   }
 
