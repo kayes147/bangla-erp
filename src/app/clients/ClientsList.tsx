@@ -15,9 +15,13 @@ import {
   ShieldCheck, 
   ExternalLink,
   MapPin,
-  Calendar
+  Calendar,
+  Trash2,
+  AlertTriangle,
+  Pencil,
+  Save
 } from "lucide-react";
-import { createClientLogin } from "@/actions/clientActions";
+import { createClientLogin, deleteClient, updateClient } from "@/actions/clientActions";
 import { useRouter } from "next/navigation";
 
 export default function ClientsList({ initialClients }: { initialClients: any[] }) {
@@ -37,6 +41,117 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
 
   // View Profile Modal State
   const [selectedClientForProfile, setSelectedClientForProfile] = useState<any | null>(null);
+
+  // Delete Company Modal State
+  const [selectedClientForDelete, setSelectedClientForDelete] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleDeleteCompany = async () => {
+    if (!selectedClientForDelete) return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      const res = await deleteClient(selectedClientForDelete.id);
+      if (res.success) {
+        setSelectedClientForDelete(null);
+        if (selectedClientForProfile?.id === selectedClientForDelete.id) {
+          setSelectedClientForProfile(null);
+        }
+        router.refresh();
+      } else {
+        setDeleteError(res.error || "প্রতিষ্ঠান মুছতে সমস্যা হয়েছে");
+      }
+    } catch (err: any) {
+      setDeleteError(err.message || "একটি ত্রুটি ঘটেছে");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Edit Company Modal State
+  const [selectedClientForEdit, setSelectedClientForEdit] = useState<any | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editAmount, setEditAmount] = useState("0");
+  const [editBalanceType, setEditBalanceType] = useState<"none" | "receivable" | "payable">("none");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  const openEditModal = (client: any) => {
+    setSelectedClientForEdit(client);
+    setEditName(client.name);
+    setEditPhone(client.phone);
+    setEditAddress(client.address || "");
+    const bal = client.openingBalance || 0;
+    if (bal > 0) {
+      setEditBalanceType("receivable");
+      setEditAmount(bal.toString());
+    } else if (bal < 0) {
+      setEditBalanceType("payable");
+      setEditAmount(Math.abs(bal).toString());
+    } else {
+      setEditBalanceType("none");
+      setEditAmount("0");
+    }
+    setEditError("");
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClientForEdit) return;
+    if (!editName.trim()) {
+      setEditError("অনুগ্রহ করে প্রতিষ্ঠানের নাম লিখুন।");
+      return;
+    }
+    if (!editPhone.trim()) {
+      setEditError("অনুগ্রহ করে মোবাইল নম্বর লিখুন।");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError("");
+
+    let openingBalance = parseFloat(editAmount) || 0;
+    if (editBalanceType === "none") {
+      openingBalance = 0;
+    } else if (editBalanceType === "payable") {
+      openingBalance = -Math.abs(openingBalance);
+    } else {
+      openingBalance = Math.abs(openingBalance);
+    }
+
+    try {
+      const res = await updateClient({
+        id: selectedClientForEdit.id,
+        name: editName.trim(),
+        phone: editPhone.trim(),
+        address: editAddress.trim(),
+        openingBalance,
+      });
+
+      if (res.success) {
+        setSelectedClientForEdit(null);
+        if (selectedClientForProfile?.id === selectedClientForEdit.id) {
+          setSelectedClientForProfile({
+            ...selectedClientForProfile,
+            name: editName.trim(),
+            phone: editPhone.trim(),
+            address: editAddress.trim(),
+            openingBalance,
+          });
+        }
+        router.refresh();
+      } else {
+        setEditError(res.error || "প্রতিষ্ঠান আপডেট করতে ব্যর্থ হয়েছে");
+      }
+    } catch (err: any) {
+      setEditError(err.message || "একটি ত্রুটি ঘটেছে");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const filteredClients = initialClients.filter((client) => {
     const matchesSearch =
@@ -206,12 +321,31 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
 
                 {/* Action Column */}
                 <td className="p-4 text-right">
-                  <button
-                    onClick={() => setSelectedClientForProfile(client)}
-                    className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-sm cursor-pointer"
-                  >
-                    View Profile
-                  </button>
+                  <div className="flex items-center justify-end space-x-1.5">
+                    <button
+                      onClick={() => setSelectedClientForProfile(client)}
+                      className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-sm cursor-pointer mr-1"
+                    >
+                      View Profile
+                    </button>
+                    <button
+                      onClick={() => openEditModal(client)}
+                      className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                      title="প্রতিষ্ঠান এডিট করুন (Edit Company)"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeleteError("");
+                        setSelectedClientForDelete(client);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      title="প্রতিষ্ঠান মুছে ফেলুন (Delete Company)"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -491,7 +625,241 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                   <span>WhatsApp</span>
                 </a>
               </div>
+
+              {/* Profile Modal Action Buttons */}
+              <div className="pt-2 border-t border-gray-100 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const c = selectedClientForProfile;
+                    setSelectedClientForProfile(null);
+                    openEditModal(c);
+                  }}
+                  className="flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Pencil size={14} />
+                  <span>তথ্য এডিট</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteError("");
+                    setSelectedClientForDelete(selectedClientForProfile);
+                  }}
+                  className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 size={14} />
+                  <span>মুছে ফেলুন</span>
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {selectedClientForDelete && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-red-600 text-white flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle size={20} className="text-red-200" />
+                <h3 className="font-bold text-base">প্রতিষ্ঠান মুছে ফেলার নিশ্চিতকরণ</h3>
+              </div>
+              <button
+                onClick={() => setSelectedClientForDelete(null)}
+                disabled={isDeleting}
+                className="text-red-200 hover:text-white p-1 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              {deleteError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
+                  {deleteError}
+                </div>
+              )}
+
+              <div className="text-center py-2">
+                <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
+                  <Trash2 size={28} />
+                </div>
+                <h4 className="font-extrabold text-lg text-gray-900">
+                  {selectedClientForDelete.name}
+                </h4>
+                <p className="text-xs text-gray-500 mt-1 font-mono">
+                  {selectedClientForDelete.phone}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5 font-medium">
+                <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                  <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                  <span>সতর্কবার্তা:</span>
+                </p>
+                <p>
+                  আপনি কি নিশ্চিতভাবে এই প্রতিষ্ঠানটি মুছে ফেলতে চান?
+                </p>
+                {selectedClientForDelete.openingBalance !== 0 && (
+                  <p className="text-red-700 font-bold">
+                    বর্তমান বকেয়া: ৳{Math.abs(selectedClientForDelete.openingBalance).toLocaleString()}
+                  </p>
+                )}
+                <p className="text-[11px] text-amber-700">
+                  এটি মুছে ফেললে এই প্রতিষ্ঠানের সাথে যুক্ত সকল তথ্য, চালান ও লগইন অ্যাক্সেস স্থায়ীভাবে মুছে যাবে।
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setSelectedClientForDelete(null)}
+                  className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  বাতিল (Cancel)
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleDeleteCompany}
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 active:scale-95 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Trash2 size={16} />
+                  <span>{isDeleting ? "মুছে ফেলা হচ্ছে..." : "হ্যাঁ, মুছে ফেলুন"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT COMPANY MODAL */}
+      {selectedClientForEdit && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <Pencil size={18} className="text-indigo-400" />
+                <h3 className="font-bold text-base">প্রতিষ্ঠানের তথ্য এডিট করুন (Edit Company)</h3>
+              </div>
+              <button
+                onClick={() => setSelectedClientForEdit(null)}
+                disabled={isSavingEdit}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+              {editError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700">
+                  {editError}
+                </div>
+              )}
+
+              {/* Name */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  প্রতিষ্ঠানের নাম <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="যেমন: মেসার্স রহিম ট্রেডার্স"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-gray-900"
+                  required
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  মোবাইল নম্বর <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder="যেমন: 01700000000"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-gray-900 font-mono"
+                  required
+                />
+              </div>
+
+              {/* Address */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  ঠিকানা
+                </label>
+                <input
+                  type="text"
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  placeholder="প্রতিষ্ঠানের সম্পূর্ণ ঠিকানা লিখুন..."
+                  className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-gray-900"
+                />
+              </div>
+
+              {/* Opening Balance / Balance Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    বকেয়া টাকার পরিমাণ
+                  </label>
+                  <input
+                    type="number"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    disabled={editBalanceType === "none"}
+                    placeholder="৳ 0.00"
+                    className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    টাকার ধরন
+                  </label>
+                  <select
+                    value={editBalanceType}
+                    onChange={(e: any) => setEditBalanceType(e.target.value)}
+                    className="w-full p-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-xs text-gray-900 bg-white cursor-pointer"
+                  >
+                    <option value="none">কোনো বকেয়া নেই</option>
+                    <option value="receivable">আমি টাকা পাবো (পাওনা)</option>
+                    <option value="payable">আমাকে দিতে হবে (দেনা)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 flex items-center justify-end space-x-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  disabled={isSavingEdit}
+                  onClick={() => setSelectedClientForEdit(null)}
+                  className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  বাতিল (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Save size={16} />
+                  <span>{isSavingEdit ? "সংরক্ষণ হচ্ছে..." : "আপডেট সংরক্ষণ করুন"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

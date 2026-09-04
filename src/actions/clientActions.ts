@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
+import { recordAuditLog } from "./auditLogActions";
+
 export async function createClient(data: {
   type: string;
   name: string;
@@ -21,23 +23,197 @@ export async function createClient(data: {
       },
     });
 
-    revalidatePath("/clients");
-
-    // Auto-trigger 2nd Backup Vault snapshot
     try {
-      const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
-      await createAutomatedBackupSnapshot(
-        "AUTO_COMPANY_CREATED",
+      revalidatePath("/clients");
+      revalidatePath("/product-in");
+      revalidatePath("/product-out");
+      revalidatePath("/loan");
+      revalidatePath("/main-cash");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidate path warning:", e);
+    }
+
+    try {
+      await recordAuditLog(
+        "owner",
+        "CREATE_COMPANY",
         `Created Company '${client.name}' (${client.phone}) with initial balance ৳${client.openingBalance}`
       );
+    } catch (aErr) {
+      console.warn("Audit log warning:", aErr);
+    }
+
+    // Auto-trigger 2nd Backup Vault snapshot (non-blocking to prevent serverless timeout)
+    try {
+      import("@/lib/backupVault")
+        .then(({ createAutomatedBackupSnapshot }) => {
+          createAutomatedBackupSnapshot(
+            "AUTO_COMPANY_CREATED",
+            `Created Company '${client.name}' (${client.phone}) with initial balance ৳${client.openingBalance}`
+          ).catch((bErr) => console.warn("Auto backup warning:", bErr));
+        })
+        .catch((e) => console.warn("Backup import warning:", e));
     } catch (bErr) {
       console.warn("Auto backup warning:", bErr);
     }
 
     return { success: true, client };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating client:", error);
-    return { success: false, error: "Failed to create client" };
+    return { success: false, error: error?.message || "প্রতিষ্ঠান সংরক্ষণ করতে ব্যর্থ হয়েছে।" };
+  }
+}
+
+export async function deleteClient(clientId: string) {
+  try {
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: {
+        invoices: {
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!client) {
+      return { success: false, error: "প্রতিষ্ঠানটি খুঁজে পাওয়া যায়নি।" };
+    }
+
+    const invoiceIds = client.invoices.map((inv) => inv.id);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete associated user login for this client
+      await tx.user.deleteMany({
+        where: { clientId },
+      });
+
+      // 2. Delete invoice items for all invoices of this client
+      if (invoiceIds.length > 0) {
+        await tx.invoiceItem.deleteMany({
+          where: { invoiceId: { in: invoiceIds } },
+        });
+      }
+
+      // 3. Delete transactions related to this client or invoices
+      await tx.transaction.deleteMany({
+        where: {
+          OR: [
+            { clientId },
+            ...(invoiceIds.length > 0 ? [{ invoiceId: { in: invoiceIds } }] : []),
+          ],
+        },
+      });
+
+      // 4. Delete loans associated with this client
+      await tx.loan.deleteMany({
+        where: { clientId },
+      });
+
+      // 5. Delete invoices of this client
+      if (invoiceIds.length > 0) {
+        await tx.invoice.deleteMany({
+          where: { id: { in: invoiceIds } },
+        });
+      }
+
+      // 6. Delete client
+      await tx.client.delete({
+        where: { id: clientId },
+      });
+    });
+
+    try {
+      revalidatePath("/clients");
+      revalidatePath("/product-in");
+      revalidatePath("/product-out");
+      revalidatePath("/loan");
+      revalidatePath("/main-cash");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidate path warning:", e);
+    }
+
+    // Record audit log
+    try {
+      await recordAuditLog(
+        "owner",
+        "DELETE_COMPANY",
+        `Deleted Company '${client.name}' (${client.phone}) with balance ৳${client.openingBalance}`
+      );
+    } catch (aErr) {
+      console.warn("Audit log warning:", aErr);
+    }
+
+    // Auto backup snapshot
+    try {
+      const { createAutomatedBackupSnapshot } = await import("@/lib/backupVault");
+      await createAutomatedBackupSnapshot(
+        "AUTO_COMPANY_DELETED",
+        `Deleted Company '${client.name}' (${client.phone})`
+      );
+    } catch (bErr) {
+      console.warn("Auto backup warning:", bErr);
+    }
+
+    return { success: true, message: "প্রতিষ্ঠান সফলভাবে মুছে ফেলা হয়েছে!" };
+  } catch (error: any) {
+    console.error("Error deleting client:", error);
+    return { success: false, error: error?.message || "প্রতিষ্ঠান মুছতে ব্যর্থ হয়েছে।" };
+  }
+}
+
+export async function updateClient(data: {
+  id: string;
+  name: string;
+  phone: string;
+  address?: string;
+  openingBalance?: number;
+}) {
+  try {
+    const existing = await prisma.client.findUnique({
+      where: { id: data.id },
+    });
+
+    if (!existing) {
+      return { success: false, error: "প্রতিষ্ঠানটি খুঁজে পাওয়া যায়নি।" };
+    }
+
+    const updated = await prisma.client.update({
+      where: { id: data.id },
+      data: {
+        name: data.name.trim(),
+        phone: data.phone.trim(),
+        address: data.address?.trim() || null,
+        ...(data.openingBalance !== undefined ? { openingBalance: data.openingBalance } : {}),
+      },
+    });
+
+    try {
+      revalidatePath("/clients");
+      revalidatePath("/product-in");
+      revalidatePath("/product-out");
+      revalidatePath("/loan");
+      revalidatePath("/main-cash");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidate path warning:", e);
+    }
+
+    try {
+      await recordAuditLog(
+        "owner",
+        "UPDATE_COMPANY",
+        `Updated Company '${updated.name}' (${updated.phone})`
+      );
+    } catch (aErr) {
+      console.warn("Audit log warning:", aErr);
+    }
+
+    return { success: true, client: updated, message: "প্রতিষ্ঠানের তথ্য সফলভাবে আপডেট করা হয়েছে!" };
+  } catch (error: any) {
+    console.error("Error updating client:", error);
+    return { success: false, error: error?.message || "প্রতিষ্ঠান আপডেট করতে ব্যর্থ হয়েছে।" };
   }
 }
 

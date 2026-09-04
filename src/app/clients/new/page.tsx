@@ -51,6 +51,7 @@ export default function AddNewClient() {
 
     setLoading(false);
     if (res.success) {
+      router.refresh();
       router.push("/clients");
     } else {
       setErrorMessage(res.error || "প্রতিষ্ঠান সংরক্ষণ করতে ব্যর্থ হয়েছে।");
