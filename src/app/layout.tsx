@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import Providers from "@/components/Providers";
+import NavigationProgressBar from "@/components/NavigationProgressBar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,6 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex h-screen h-[100dvh] overflow-hidden bg-gray-50`}
       >
         <Providers>
+          <NavigationProgressBar />
           <LayoutWrapper>
             {children}
           </LayoutWrapper>
