@@ -37,11 +37,23 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
   const [items, setItems] = useState<InvoiceItemRow[]>([
     { id: "1", productName: "MDF", quantity: "", pricePerUnit: "" }
   ]);
+  const [masterPrice, setMasterPrice] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "mobile_banking" | "bank">("cash");
   const [dueDate, setDueDate] = useState("");
   const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<any | null>(null);
   const [correctionInvoiceId, setCorrectionInvoiceId] = useState<string | null>(null);
+
+  // Apply master price to all existing items
+  const handleApplyMasterPrice = (val: string) => {
+    setMasterPrice(val);
+    setItems((prev) =>
+      prev.map((it) => ({
+        ...it,
+        pricePerUnit: val,
+      }))
+    );
+  };
 
   // Toggle or add a preset product into items list
   const handleToggleOrAddPreset = (pName: string) => {
@@ -60,7 +72,7 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
 
     // If only 1 item exists and it's completely empty, replace its name
     if (items.length === 1 && !items[0].productName.trim() && !items[0].quantity && !items[0].pricePerUnit) {
-      setItems([{ ...items[0], productName: pName }]);
+      setItems([{ ...items[0], productName: pName, pricePerUnit: masterPrice || items[0].pricePerUnit }]);
       setTimeout(() => {
         const el = document.getElementById(`qty-input-${items[0].id}`) as HTMLInputElement;
         el?.focus();
@@ -72,7 +84,7 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
     const newId = Date.now().toString() + Math.random().toString(36).substring(2, 5);
     setItems((prev) => [
       ...prev,
-      { id: newId, productName: pName, quantity: "", pricePerUnit: "" },
+      { id: newId, productName: pName, quantity: "", pricePerUnit: masterPrice || "" },
     ]);
     setTimeout(() => {
       const el = document.getElementById(`qty-input-${newId}`) as HTMLInputElement;
@@ -94,7 +106,7 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
     const newId = Date.now().toString() + Math.random().toString(36).substring(2, 5);
     setItems((prev) => [
       ...prev,
-      { id: newId, productName: "", quantity: "", pricePerUnit: "" },
+      { id: newId, productName: "", quantity: "", pricePerUnit: masterPrice || "" },
     ]);
     setTimeout(() => {
       const el = document.getElementById(`name-input-${newId}`) as HTMLInputElement;
@@ -167,6 +179,7 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
     setLoading(false);
     if (res.success) {
       setItems([{ id: Date.now().toString(), productName: "MDF", quantity: "", pricePerUnit: "" }]);
+      setMasterPrice("");
       setPaidAmount("");
       setPaymentMethod("cash");
       setDueDate("");
@@ -269,18 +282,46 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
 
           {/* Dynamic Multi-Item Table */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-bold text-gray-800">
-                চালানের পণ্য তালিকা ও পরিমাণ (Invoice Products & Quantity) <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200"
-              >
-                <Plus size={13} />
-                <span>+ অন্য পণ্য যোগ করুন</span>
-              </button>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-sm font-black text-gray-800">
+                  চালানের পণ্য তালিকা ও পরিমাণ (Invoice Products & Quantity) <span className="text-red-500">*</span>
+                </label>
+                <p className="text-[11px] text-gray-500">
+                  নিচে প্রতি পণ্যের পরিমাণ লিখুন এবং দর আলাদা বা একবারে নির্ধারণ করুন
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Master Rate per piece Section */}
+                <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 px-3 py-1.5 rounded-xl shadow-2xs">
+                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1 select-none whitespace-nowrap">
+                    🎯 সব পণ্যের এক দর (Master Rate):
+                  </span>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-2.5 text-xs font-bold text-gray-400">৳</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={masterPrice}
+                      onChange={(e) => handleApplyMasterPrice(e.target.value)}
+                      placeholder="একক দর"
+                      className="w-24 sm:w-28 pl-6 pr-2 py-1 text-xs sm:text-sm font-bold border border-amber-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500 font-mono text-gray-950 shadow-2xs"
+                      title="এখানে একক দর লিখলে নিচের সবগুলো পণ্যের দর একসাথে স্বয়ংক্রিয়ভাবে বসে যাবে"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="text-xs font-bold text-blue-700 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-300 transition-colors shadow-2xs"
+                >
+                  <Plus size={13} />
+                  <span>+ অন্য পণ্য যোগ করুন</span>
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-2xs">
@@ -290,7 +331,16 @@ export default function ProductOutClient({ initialInvoices, clients, userRole }:
                     <th className="p-3 w-10 text-center">#</th>
                     <th className="p-3 min-w-[170px]">পণ্যের নাম (Product Name)</th>
                     <th className="p-3 w-36">পরিমাণ (Quantity) <span className="text-red-400">*</span></th>
-                    <th className="p-3 w-36">বিক্রি দর / প্রতি একক (৳) <span className="text-red-400">*</span></th>
+                    <th className="p-3 w-40">
+                      <div className="flex flex-col">
+                        <span>বিক্রি দর / প্রতি একক (৳) <span className="text-red-400">*</span></span>
+                        {masterPrice ? (
+                          <span className="text-[10px] text-amber-300 font-mono font-normal">
+                            (এক দর: ৳ {masterPrice})
+                          </span>
+                        ) : null}
+                      </div>
+                    </th>
                     <th className="p-3 w-36 text-right">মোট টাকা (৳)</th>
                     <th className="p-3 w-12 text-center">মুছুন</th>
                   </tr>
