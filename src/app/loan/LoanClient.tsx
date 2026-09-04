@@ -36,6 +36,7 @@ export interface DueEntry {
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
+  image?: string | null;
 }
 
 export default function LoanClient({
@@ -82,6 +83,7 @@ export default function LoanClient({
       totalAmount: inv.totalAmount,
       paidAmount: inv.paidAmount,
       dueAmount: Math.max(0, inv.totalAmount - inv.paidAmount),
+      image: inv.client?.image || null,
     }));
 
   const companyOpeningEntries: DueEntry[] = (clients || [])
@@ -99,6 +101,7 @@ export default function LoanClient({
       totalAmount: c.openingBalance,
       paidAmount: 0,
       dueAmount: c.openingBalance,
+      image: c.image || null,
     }));
 
   const allDueEntries: DueEntry[] = [...invoiceEntries, ...companyOpeningEntries];
@@ -354,13 +357,27 @@ export default function LoanClient({
 
                     {/* Party */}
                     <td className="p-4">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-3">
                         <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black shrink-0">
                           {index + 1}
                         </span>
-                        <span className="font-bold text-gray-900">{item.clientName}</span>
+
+                        {/* Company Photo Avatar */}
+                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs">
+                          {item.image ? (
+                            <img src={item.image} alt={item.clientName} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-amber-500 to-indigo-600 text-white font-bold flex items-center justify-center text-xs uppercase">
+                              {item.clientName?.charAt(0) || "C"}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="font-bold text-gray-900 leading-tight">{item.clientName}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{item.clientPhone || "ফোন নেই"}</p>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 pl-7">{item.clientPhone || "ফোন নেই"}</div>
                     </td>
 
                     {/* Due Type */}

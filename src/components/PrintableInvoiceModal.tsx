@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Printer, X } from "lucide-react";
+import { getBusinessProfile } from "@/actions/profileActions";
 
 interface InvoiceItem {
   product?: { name: string };
@@ -35,6 +37,48 @@ export default function PrintableInvoiceModal({
   onClose: () => void;
   invoice: InvoiceData | null;
 }) {
+  const [bizInfo, setBizInfo] = useState<{
+    name: string;
+    logo: string | null;
+    phone: string | null;
+    address: string | null;
+  }>({
+    name: "BOLAKA FACTORY",
+    logo: null,
+    phone: "+880 1711-000000",
+    address: "ঢাকা, বাংলাদেশ",
+  });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const name = localStorage.getItem("erp_business_name");
+      const logo = localStorage.getItem("erp_business_logo");
+      const phone = localStorage.getItem("erp_business_phone");
+      const address = localStorage.getItem("erp_business_address");
+
+      if (name || logo) {
+        setBizInfo({
+          name: name || "BOLAKA FACTORY",
+          logo: logo || null,
+          phone: phone || "+880 1711-000000",
+          address: address || "ঢাকা, বাংলাদেশ",
+        });
+      } else {
+        getBusinessProfile().then((res) => {
+          if (res.success && res.profile) {
+            setBizInfo({
+              name: res.profile.companyName || "BOLAKA FACTORY",
+              logo: res.profile.logo || null,
+              phone: res.profile.phone || "+880 1711-000000",
+              address: res.profile.address || "ঢাকা, বাংলাদেশ",
+            });
+          }
+        });
+      }
+    } catch (e) {}
+  }, [isOpen]);
+
   if (!isOpen || !invoice) return null;
 
   const isSale = invoice.type === "product_out";
@@ -74,17 +118,24 @@ export default function PrintableInvoiceModal({
         {/* Printable Area */}
         <div id="printable-voucher" className="p-8 sm:p-10 space-y-6 text-gray-900 bg-white">
           {/* Company Header */}
-          <div className="border-b-2 border-slate-900 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h1 className="text-2xl font-black tracking-wider text-slate-900">
-                BOLAKA FACTORY
-              </h1>
-              <p className="text-xs text-gray-500 font-medium">
-                উন্নত মানের পণ্য প্রস্তুত ও সরবরাহকারী
-              </p>
-              <p className="text-xs text-gray-500">
-                ফোন: +880 1711-000000 | ঢাকা, বাংলাদেশ
-              </p>
+          <div className="border-b-2 border-slate-900 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {bizInfo.logo && (
+                <div className="w-14 h-14 rounded-lg overflow-hidden border border-gray-200 p-0.5 shrink-0">
+                  <img src={bizInfo.logo} alt={bizInfo.name} className="w-full h-full object-contain" />
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl font-black tracking-wider text-slate-900">
+                  {bizInfo.name}
+                </h1>
+                <p className="text-xs text-gray-500 font-medium">
+                  উন্নত মানের পণ্য প্রস্তুত ও সরবরাহকারী
+                </p>
+                <p className="text-xs text-gray-500">
+                  {bizInfo.phone ? `ফোন: ${bizInfo.phone}` : ""} {bizInfo.address ? `| ${bizInfo.address}` : ""}
+                </p>
+              </div>
             </div>
             <div className="sm:text-right">
               <span

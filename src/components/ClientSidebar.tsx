@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Home, 
   PackagePlus, 
@@ -22,6 +22,23 @@ export default function ClientSidebar({
 }) {
   const pathname = usePathname();
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [bizLogo, setBizLogo] = useState<string | null>(null);
+  const [bizName, setBizName] = useState("BOLAKA FACTORY");
+
+  useEffect(() => {
+    const updateBiz = () => {
+      try {
+        const logo = localStorage.getItem("erp_business_logo");
+        const name = localStorage.getItem("erp_business_name");
+        if (logo) setBizLogo(logo);
+        if (name) setBizName(name);
+      } catch (e) {}
+    };
+
+    updateBiz();
+    window.addEventListener("businessProfileUpdated", updateBiz);
+    return () => window.removeEventListener("businessProfileUpdated", updateBiz);
+  }, []);
 
   return (
     <>
@@ -41,14 +58,25 @@ export default function ClientSidebar({
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-slate-700 sticky top-0 bg-slate-900 z-10 flex items-center justify-between">
-          <div className="flex flex-col justify-center">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-white truncate tracking-wide">BOLAKA FACTORY</h2>
-              <span className="text-[10px] bg-purple-900/80 text-purple-300 border border-purple-700 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                প্রতিষ্ঠান
-              </span>
+          <div className="flex items-center space-x-3 overflow-hidden">
+            {bizLogo ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 shrink-0 shadow-sm">
+                <img src={bizLogo} alt={bizName} className="w-full h-full object-contain rounded-lg" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 text-purple-300 flex items-center justify-center shrink-0 font-black text-lg shadow-inner">
+                {bizName.charAt(0)}
+              </div>
+            )}
+            <div className="flex flex-col justify-center overflow-hidden">
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-base font-bold text-white truncate tracking-wide">{bizName}</h2>
+                <span className="text-[9px] bg-purple-900/80 text-purple-300 border border-purple-700 px-1.5 py-0.2 rounded font-bold uppercase tracking-wider shrink-0">
+                  প্রতিষ্ঠান
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">Powered by <span className="text-[12px] text-blue-400 font-bold">Bangla</span> <span className="text-[12px] font-medium text-slate-300">ERP</span></p>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Powered by <span className="text-[13px] text-blue-400 font-bold">Bangla</span> <span className="text-[13px] font-medium text-slate-300">ERP</span></p>
           </div>
           <button
             onClick={onClose}

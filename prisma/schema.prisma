@@ -14,6 +14,7 @@ model User {
   username       String         @unique
   password       String         // In a real app, this will be hashed
   role           String         // "OWNER", "MANAGER", "CLIENT"
+  image          String?        @db.Text // Profile Photo (Base64)
   
   // Relations
   clientId       String?        @unique // If role is CLIENT
@@ -42,6 +43,7 @@ model Client {
   name           String
   phone          String
   address        String?
+  image          String?        @db.Text // Company Photo / Logo (Base64)
   openingBalance Float          @default(0) // Positive = Receivable, Negative = Payable
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -229,5 +231,17 @@ model BackupVault {
   recordCount Int
   payload     String   @db.Text // Full JSON stringified database backup
   createdAt   DateTime @default(now())
+}
+
+// Business Settings & Owner Company Profile
+model BusinessProfile {
+  id          String   @id @default("default")
+  companyName String   @default("BOLAKA FACTORY")
+  phone       String?
+  email       String?
+  address     String?
+  logo        String?  @db.Text // Owner company logo / photo (Base64)
+  ownerPhoto  String?  @db.Text // Owner photo (Base64)
+  updatedAt   DateTime @updatedAt
 }
 

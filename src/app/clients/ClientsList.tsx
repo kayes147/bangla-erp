@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { 
   Search, 
   KeyRound, 
@@ -24,14 +24,20 @@ import {
   Package,
   Receipt,
   Building2,
-  Printer
+  Printer,
+  Camera,
+  Upload,
+  Loader2
 } from "lucide-react";
-import { createClientLogin, deleteClient, updateClient, revokeClientLogin } from "@/actions/clientActions";
+import { createClientLogin, deleteClient, updateClient, revokeClientLogin, updateClientPhoto } from "@/actions/clientActions";
 import { useRouter } from "next/navigation";
 import PrintableInvoiceModal from "@/components/PrintableInvoiceModal";
+import { compressImageFile } from "@/lib/imageUtils";
 
 export default function ClientsList({ initialClients }: { initialClients: any[] }) {
   const router = useRouter();
+  const editPhotoInputRef = useRef<HTMLInputElement>(null);
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
 
@@ -83,16 +89,53 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editImage, setEditImage] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("0");
   const [editBalanceType, setEditBalanceType] = useState<"none" | "receivable" | "payable">("none");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
+  const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
+
+  const handleEditPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file);
+      setEditImage(compressed);
+    } catch (err: any) {
+      alert(err.message || "ছবি আপলোড করতে সমস্যা হয়েছে");
+    }
+  };
+
+  const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedClientForProfile) return;
+    try {
+      setIsUpdatingPhoto(true);
+      const compressed = await compressImageFile(file);
+      const res = await updateClientPhoto(selectedClientForProfile.id, compressed);
+      if (res.success) {
+        setSelectedClientForProfile({
+          ...selectedClientForProfile,
+          image: compressed,
+        });
+        router.refresh();
+      } else {
+        alert(res.error || "ছবি আপডেট করতে ব্যর্থ হয়েছে");
+      }
+    } catch (err: any) {
+      alert(err.message || "ছবি আপলোড করতে সমস্যা হয়েছে");
+    } finally {
+      setIsUpdatingPhoto(false);
+    }
+  };
 
   const openEditModal = (client: any) => {
     setSelectedClientForEdit(client);
     setEditName(client.name);
     setEditPhone(client.phone);
     setEditAddress(client.address || "");
+    setEditImage(client.image || null);
     const bal = client.openingBalance || 0;
     if (bal > 0) {
       setEditBalanceType("receivable");
@@ -137,6 +180,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
         name: editName.trim(),
         phone: editPhone.trim(),
         address: editAddress.trim(),
+        image: editImage,
         openingBalance,
       });
 
@@ -148,6 +192,7 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
             name: editName.trim(),
             phone: editPhone.trim(),
             address: editAddress.trim(),
+            image: editImage,
             openingBalance,
           });
         }
@@ -307,15 +352,29 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                   {index + 1}
                 </td>
 
-                {/* Name and Address */}
+                {/* Name, Logo and Address */}
                 <td className="p-4">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-black border border-indigo-200 shrink-0">
                       {index + 1}
                     </span>
-                    <p className="font-bold text-gray-900">{client.name}</p>
+
+                    {/* Company Photo Avatar */}
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs">
+                      {client.image ? (
+                        <img src={client.image} alt={client.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center text-sm uppercase">
+                          {client.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-gray-900 leading-tight">{client.name}</p>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">{client.address || "ঠিকানা নেই"}</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 font-medium pl-7">{client.address || "ঠিকানা নেই"}</p>
                 </td>
 
                 {/* Phone */}
@@ -667,9 +726,41 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
               {/* Modal Header */}
               <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex justify-between items-center shrink-0 border-b border-slate-800">
                 <div className="flex items-center space-x-3">
-                  <div className="w-11 h-11 bg-indigo-600/40 text-indigo-300 border border-indigo-400/30 rounded-xl flex items-center justify-center font-bold text-xl shadow-inner">
-                    {selectedClientForProfile.name?.charAt(0) || "C"}
+                  {/* Interactive Company Photo with Quick Camera Upload */}
+                  <div className="relative group shrink-0">
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-indigo-600/40 text-indigo-300 border border-indigo-400/30 flex items-center justify-center font-bold text-xl shadow-inner">
+                      {selectedClientForProfile.image ? (
+                        <img
+                          src={selectedClientForProfile.image}
+                          alt={selectedClientForProfile.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>{selectedClientForProfile.name?.charAt(0) || "C"}</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => profilePhotoInputRef.current?.click()}
+                      disabled={isUpdatingPhoto}
+                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white border-2 border-slate-900 flex items-center justify-center shadow-sm cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                      title="কোম্পানির ছবি পরিবর্তন করুন"
+                    >
+                      {isUpdatingPhoto ? (
+                        <Loader2 size={11} className="animate-spin" />
+                      ) : (
+                        <Camera size={11} />
+                      )}
+                    </button>
+                    <input
+                      ref={profilePhotoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfilePhotoUpload}
+                      className="hidden"
+                    />
                   </div>
+
                   <div>
                     <div className="flex items-center space-x-2">
                       <h3 className="font-bold text-lg text-white">{selectedClientForProfile.name}</h3>
@@ -1326,6 +1417,49 @@ export default function ClientsList({ initialClients }: { initialClients: any[] 
                   {editError}
                 </div>
               )}
+
+              {/* Photo Upload in Edit Modal */}
+              <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="w-14 h-14 rounded-xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs">
+                  {editImage ? (
+                    <img src={editImage} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center text-sm uppercase">
+                      {editName ? editName.charAt(0) : "C"}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <span className="block text-xs font-bold text-gray-800">প্রতিষ্ঠানের ছবি / লোগো</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => editPhotoInputRef.current?.click()}
+                      className="px-2.5 py-1 bg-white border border-gray-300 hover:border-indigo-500 text-gray-700 hover:text-indigo-600 rounded-lg text-xs font-bold transition-all flex items-center space-x-1 shadow-2xs cursor-pointer"
+                    >
+                      <Camera size={12} />
+                      <span>{editImage ? "ছবি পরিবর্তন" : "ছবি যোগ করুন"}</span>
+                    </button>
+                    {editImage && (
+                      <button
+                        type="button"
+                        onClick={() => setEditImage(null)}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="ছবি বাদ দিন"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                    <input
+                      ref={editPhotoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditPhotoChange}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* Name */}
               <div>

@@ -1,20 +1,34 @@
 "use client";
-import { useState } from "react";
-import { Building2, Save, ArrowLeft, AlertCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { Building2, Save, ArrowLeft, AlertCircle, Camera, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/actions/clientActions";
+import { compressImageFile } from "@/lib/imageUtils";
 
 export default function AddNewClient() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [type] = useState("supplier"); // Always standard company/institution
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [image, setImage] = useState<string | null>(null);
   const [amount, setAmount] = useState("0");
   const [balanceType, setBalanceType] = useState("none");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file);
+      setImage(compressed);
+    } catch (err: any) {
+      alert(err.message || "ছবি আপলোড করতে ব্যর্থ হয়েছে");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +60,7 @@ export default function AddNewClient() {
       name: name.trim(),
       phone: phone.trim(),
       address: address.trim(),
+      image: image || undefined,
       openingBalance,
     });
 
@@ -90,6 +105,56 @@ export default function AddNewClient() {
         )}
 
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
+          {/* Photo / Logo Upload */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+            <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white border-2 border-dashed border-indigo-200 flex items-center justify-center shrink-0 shadow-2xs">
+              {image ? (
+                <img src={image} alt="Company Logo Preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-400">
+                  <Building2 size={28} className="text-indigo-400" />
+                  <span className="text-[10px] font-bold mt-1 text-slate-500">লোগো/ছবি</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 text-center sm:text-left space-y-1">
+              <label className="block text-sm font-extrabold text-gray-900">
+                প্রতিষ্ঠানের ছবি / লোগো <span className="text-[10px] font-normal text-gray-400 uppercase">(Company Photo/Logo)</span>
+              </label>
+              <p className="text-xs text-gray-500">
+                প্রতিষ্ঠানের প্রোফাইল ও ভাউচারের জন্য ছবি বা লোগো যোগ করুন (ঐচ্ছিক)।
+              </p>
+              <div className="pt-1 flex items-center justify-center sm:justify-start gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-white border border-gray-300 hover:border-indigo-500 text-gray-700 hover:text-indigo-600 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Camera size={14} />
+                  <span>{image ? "ছবি পরিবর্তন করুন" : "ছবি আপলোড করুন"}</span>
+                </button>
+                {image && (
+                  <button
+                    type="button"
+                    onClick={() => setImage(null)}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                    title="ছবি মুছে ফেলুন"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Name */}

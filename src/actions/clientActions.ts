@@ -10,6 +10,7 @@ export async function createClient(data: {
   name: string;
   phone: string;
   address?: string;
+  image?: string;
   openingBalance: number;
 }) {
   try {
@@ -19,6 +20,7 @@ export async function createClient(data: {
         name: data.name,
         phone: data.phone,
         address: data.address,
+        image: data.image || null,
         openingBalance: data.openingBalance,
       },
     });
@@ -168,6 +170,7 @@ export async function updateClient(data: {
   name: string;
   phone: string;
   address?: string;
+  image?: string | null;
   openingBalance?: number;
 }) {
   try {
@@ -185,6 +188,7 @@ export async function updateClient(data: {
         name: data.name.trim(),
         phone: data.phone.trim(),
         address: data.address?.trim() || null,
+        ...(data.image !== undefined ? { image: data.image } : {}),
         ...(data.openingBalance !== undefined ? { openingBalance: data.openingBalance } : {}),
       },
     });
@@ -217,6 +221,28 @@ export async function updateClient(data: {
   }
 }
 
+export async function updateClientPhoto(clientId: string, image: string | null) {
+  try {
+    const updated = await prisma.client.update({
+      where: { id: clientId },
+      data: { image },
+    });
+
+    try {
+      revalidatePath("/clients");
+      revalidatePath("/loan");
+      revalidatePath("/");
+    } catch (e) {
+      // ignore
+    }
+
+    return { success: true, client: updated };
+  } catch (error: any) {
+    console.error("Error updating client photo:", error);
+    return { success: false, error: error?.message || "কোম্পানির ছবি আপডেট করতে ব্যর্থ হয়েছে" };
+  }
+}
+
 export async function getClientsSummary() {
   try {
     const clients = await prisma.client.findMany({
@@ -227,6 +253,7 @@ export async function getClientsSummary() {
         name: true,
         phone: true,
         address: true,
+        image: true,
         openingBalance: true,
         createdAt: true,
       },
